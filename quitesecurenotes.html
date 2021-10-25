@@ -133,7 +133,7 @@
                     name: "AES-GCM",
                     iv: iv
                 },
-                getKey(),
+                await getKey(),
                 new TextEncoder().encode(notes)
             );
         }
