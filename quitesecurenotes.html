@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--
+    +--------------------+
+    | Quite Secure Notes |
+    +--------------------+
+    https://andreaslonn.github.io/
+
+    Hello
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quite Secure Notes</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            height: 100vh;
+        }
+        textarea {
+            padding: 10px;
+            margin: 0;
+            border: none;
+            box-sizing: border-box;
+            width: 100%;
+            font-size: larger;
+            font-family: inherit;
+            resize: none;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <textarea id="notes">Notes</textarea>
+    <script>
+        /**
+         * Convert Array Buffer to base 64 string
+         * @param {ArrayBuffer} arrayBuffer
+         * @returns {string} Base 64 string
+         */
+        function toB64(arrayBuffer) {
+            let byteString = '';
+            new Uint8Array(arrayBuffer).forEach(uInt8 => byteString += String.fromCharCode(uInt8));
+            return btoa(byteString);
+        }
+
+        /**
+         * Convert base 64 string to Array Buffer
+         * @param {string} b64 - Base 64 string
+         * @returns {ArrayBuffer} Array Buffer
+         */
+        function fromB64(b64) {
+            let byteString = atob(b64);
+            let byteArray = new Uint8Array(byteString.length);
+            for(let i=0; i < byteString.length; i++) {
+                byteArray[i] = byteString.charCodeAt(i);
+            }
+            return byteArray;
+        }
+
+        /**
+         * Read the iv and salt from localStorage if it exists. Otherwise create new random values
+         */
+        let iv = localStorage.getItem('iv') ? fromB64(localStorage.getItem('iv')) : crypto.getRandomValues(new Uint8Array(12));
+        let salt = localStorage.getItem('salt') ? fromB64(localStorage.getItem('salt')) : crypto.getRandomValues(new Uint8Array(16));
+        let password;
+
+        /**
+         * Ask the user for password through window.prompt()
+         * @param {string} msg - (Optional, default: 'Enter Password:') Message to be shown to user
+         */
+        function requestPassword(msg = 'Enter Password:') {
+            password = new TextEncoder().encode(prompt(msg));
+        }
+        requestPassword();
+
+        /**
+         * Try to decrypt notes in localStorage. Ask for password again if decryption is unsuccessful
+         */
+        (async function () {
+            // Check if there are notes in localStorage
+            if(localStorage.getItem('notes-encrypted')) {
+                // Set notes text to decrypted notes, or empty if decryption fails
+                notes.value = decryptNotes(localStorage.getItem('notes-encrypted')) || '';
+                // Check for password until password is correct
+                while (!notes.value) {
+                    requestPassword("Is the password correct? Try again");
+                    // Ask the user if they want to delete notes if password field is empty
+                    if(!password || password.length == 0 || (password[0] == 110 && password[1] == 117 && password[2] == 108 && password[3] == 108))
+                        if(confirm("Do you want to delete notes?")){
+                            localStorage.removeItem('notes-encrypted');
+                            break;
+                        }
+                    notes.value = decryptNotes(localStorage.getItem('notes-encrypted')) || '';
+                }
+            }
+        })();
+
+        /**
+         * Derive key from password
+         * @returns {CryptoKey} Generated key
+         */
+        async function getKey() {
+            return await crypto.subtle.deriveKey(
+                {
+                    "name": "PBKDF2",
+                    salt: salt,
+                    "iterations": 100000,
+                    "hash": "SHA-256"
+                },
+                await crypto.subtle.importKey(
+                    "raw",
+                    password,
+                    "PBKDF2",
+                    false,
+                    ["deriveBits", "deriveKey"]
+                ),
+                { "name": "AES-GCM", "length": 256},
+                true,
+                [ "encrypt", "decrypt" ]
+            );
+        }
+
+        /**
+         * Encrypt supplied notes
+         * @param {string} notes - Notes to be encrypted
+         * @returns {ArrayBuffer} Array Buffer of encrypted notes
+         */
+        async function encryptNotes(notes) {
+            return await crypto.subtle.encrypt({
+                    name: "AES-GCM",
+                    iv: iv
+                },
+                getKey(),
+                new TextEncoder().encode(notes)
+            );
+        }
+
+        /**
+         * Decrypt supplied base 64 string
+         * @param {string} encryptedB64 - Base 64 string of encrypted notes
+         * @returns {string} String of decrypted notes
+         */
+        async function decryptNotes(encryptedB64) {
+            try {
+                if(!encryptedB64) return '';
+                return new TextDecoder().decode(await crypto.subtle.decrypt({
+                        name: "AES-GCM",
+                        iv: iv
+                    },
+                    getKey(),
+                    fromB64(encryptedB64)
+                ));
+            } catch (e) {
+                console.error("Error:", e);
+            }
+        }
+
+        /**
+         * Encrypt and save notes to localStorage. Also generate and save new iv and salt
+         */
+        async function saveNotes() {
+            iv = crypto.getRandomValues(new Uint8Array(12));
+            salt = crypto.getRandomValues(new Uint8Array(16));
+            let ciphertext = encryptNotes(notes.value);
+            localStorage.setItem('iv', toB64(iv));
+            localStorage.setItem('salt', toB64(salt));
+            localStorage.setItem('notes-encrypted', toB64(ciphertext));
+        }
+
+        /**
+         * Save notes when text is changed.
+         * Might be a bad idea to encrypt for every change in the text as
+         * it's probably enough to save when the user has stopped typing.
+         */
+        notes.addEventListener('input', async () => saveNotes());
+    </script>
+</body>
+
+</html>
