@@ -2,6 +2,10 @@
     "name": "Notes",
     "short_name": "Notes",
     "description": "A simple notes PWA. Saves the notes (either through autosave, the save button or Ctrl+S) to Local Storage.",
+    "start_url": "/notes/index.html",
+    "display": "standalone",
+    "theme_color": "#4f0",
+    "background_color": "#777",
     "icons": [
         {
             "src": "icons/icon-32.png",
@@ -43,9 +47,5 @@
             "sizes": "512x512",
             "type": "image/png"
         }
-    ],
-    "start_url": "/notes/index.html",
-    "display": "standalone",
-    "theme_color": "#4f0",
-    "background_color": "#777"
+    ]
 }
