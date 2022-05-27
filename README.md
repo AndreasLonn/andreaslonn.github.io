@@ -3,3 +3,6 @@ This repository contains web pages. Here are links:
 
 ## [Quite Secure Notes](https://andreaslonn.github.io/quitesecurenotes.html)
 [Quite Secure Notes](https://andreaslonn.github.io/quitesecurenotes.html) is another web page that stores the user's notes, but encrypted using AES-256. As I'm not a security expert it shouldn't be trusted as completely secure.
+
+## [Certificate Viewer](https://andreaslonn.github.io/certviewer.html)
+[Certificate Viewer](https://andreaslonn.github.io/certviewer.html) creates a link to `about:certificate` based on either text or file input

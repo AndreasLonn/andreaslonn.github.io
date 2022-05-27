@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+    +--------------------+
+    | Certificate Viewer |
+    +--------------------+
+    https://andreaslonn.github.io/
+
+    Hello
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Viewer</title>
+    <style>
+        main {
+            display: flex;
+            flex-direction: column;
+        }
+        textarea#input-text {
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Certificate viewer</h1>
+    </header>
+
+    <main>
+        <label for="input-file">Upload file</label>
+        <input type="file" id="input-file" accept=".pem,.cert,*">
+        <label for="input-text">Input Text</label>
+        <textarea id="input-text" placeholder="-----BEGIN CERTIFICATE-----
+MIIFITCCBAmgAwIBAgISBHUiLk/ZMs6F6K29WJ8p4rBYMA0GCSqGSIb3DQEBCwUA
+MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD
+EwJSMzAeFw0yMjA0MDYxNzEyMTVaFw0yMjA3MDUxNzEyMTRaMBkxFzAVBgNVBAMT
+DmFuZHJlYXNsb25uLnNlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
+q8cbDO3GAfjqqbPPCBdPost8NMRmEubv85gXecll7mZMH5qSfTPuB/ouFWL3tPMf
+1U8usWeoSUK/48yatzBGwmj1KKlkaW9MS2QkydztRp+kH8LvbzbQvGknuOLWGHBA
+LLT17o/3DYxuA5LnXdY+vLvJWygQoFr2N/XhnhUjcm6OaQEJpIykydfbBQGQSEuQ
+IIw4egpgdHkYJjCOYAsXuSSggN8/FADTCec0RzVjfFTSoJ3hV9HLE9M8MCSXjuo0
+AJ/MbAxq91S8XmDcRjHCCd7Zw+NjHo8cxZCQ6NqGvn3xwx8ahmmbC+CyDEcIyJJZ
+K2Yv+qE4oS8QZfaX/RaHMwIDAQABo4ICSDCCAkQwDgYDVR0PAQH/BAQDAgWgMB0G
+A1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAMBgNVHRMBAf8EAjAAMB0GA1Ud
+DgQWBBRjThWFVlqklALCFkKkpZeaOAJXlzAfBgNVHSMEGDAWgBQULrMXt1hWy65Q
+CUDmH6+dixTCxjBVBggrBgEFBQcBAQRJMEcwIQYIKwYBBQUHMAGGFWh0dHA6Ly9y
+My5vLmxlbmNyLm9yZzAiBggrBgEFBQcwAoYWaHR0cDovL3IzLmkubGVuY3Iub3Jn
+LzAZBgNVHREEEjAQgg5hbmRyZWFzbG9ubi5zZTBMBgNVHSAERTBDMAgGBmeBDAEC
+ATA3BgsrBgEEAYLfEwEBATAoMCYGCCsGAQUFBwIBFhpodHRwOi8vY3BzLmxldHNl
+bmNyeXB0Lm9yZzCCAQMGCisGAQQB1nkCBAIEgfQEgfEA7wB2AN+lXqtogk8fbK3u
+uF9OPlrqzaISpGpejjsSwCBEXCpzAAABgAATvxoAAAQDAEcwRQIhAIIhUe/eTFKQ
+jY9qBuk4m+7Q6T+fF3cio0pPJnVOfd1aAiArHgAbdOIbCexFPexHB6saiYbravtW
+mCOxtYvaCkhFeAB1AEalVet1+pEgMLWiiWn0830RLEF0vv1JuIWr8vxw/m1HAAAB
+gAATv0oAAAQDAEYwRAIgPMGllontJKX7JoV1IpkNxe6ZM8Zv7mDGuJNmSEVV+PgC
+IARb/luYxnmVfG4yKNjCdhrVYjMZcd7s4yzrpQ8vk2e0MA0GCSqGSIb3DQEBCwUA
+A4IBAQBe/PYpQ6WES7vdh1NtAjho+yoRI0YorLfIsi23rKF6nXreKanFATOBewUe
+udztSBWf0JZpcJtelKgK97gYwNPqEESg1/Qtm+6AV6dqQbTFJMIrXx+2EGVUu1MT
+/mPPNmqhgySVAxDP+SQ1bqSZwkuC/RmKnkvk+tPoDFM4mu1bVmZnEgHamOq/Pocu
+ItnnoSkFZId+EplaTUuvMJylblRpOfbOxoAwNg5EIaPiS/ZZu99P05ckxEEadLlB
+UFKtLflgvRyBBtCAJDw2rEPHzGheHJYYNjTyr7lkwxxtSd9z53Z605puKFzjVvJa
+shKhxiei/0DraueGE2DE/5K3g03V
+-----END CERTIFICATE-----"></textarea>
+        <button id="button-view-cert">Create link</button>
+    </main>
+
+    <script>
+        function q(elem, parent=document) { return parent.querySelector(elem); }
+        function qs(elems, parent=document) { return parent.querySelectorAll(elems); }
+
+        q('input[type="file"]#input-file').addEventListener('input', async event => {
+            // Read file and set textarea content to file content
+            q('textarea#input-text').value = await event.srcElement.files[0].text();
+        });
+
+        q('button#button-view-cert').addEventListener('click', event => {
+            let certText = q('textarea#input-text').value;
+
+            // If textarea is empty
+            if(certText === '') {
+                alert('No input!');
+                return;
+            }
+
+            certText = certText.replaceAll('\n', '');
+
+            // Remove all -----END CERTIFICATE----- as they aren't necessary
+            certText = certText.replaceAll('-----END CERTIFICATE-----', '');
+
+            // Replace FIRST -----BEGIN CERTIFICATE----- as the rest will be used as delimiters
+            certText = certText.replace('-----BEGIN CERTIFICATE-----', '');
+
+            // Create array of the supplied certificates
+            let certs = certText.split('-----BEGIN CERTIFICATE-----');
+
+            // Create base link
+            let certLink = 'about:certificate?';
+
+            // Add all certificates to link
+            certs.forEach(cert => {
+                certLink += `&cert=${encodeURIComponent(cert)}`
+            });
+
+            // Remove first &
+            certLink = certLink.replace('&', '');
+
+            prompt('Copy link:', certLink);
+        });
+    </script>
+</body>
+</html>
