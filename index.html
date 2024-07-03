@@ -5,15 +5,124 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="me" href="https://social.andreaslonn.se/@AndreasLonn">
     <title>AndreasLonn</title>
+    <style>
+        @import url(toolstyle.css) layer(toolstyle);
+
+        :root {
+            --accent-color: #0f0;
+            --on-accent-color: #000;
+            --accent-color-surface: #233;
+            --on-accent-color-surface: #fff;
+        }
+
+        main {
+            container: main / inline-size;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+
+            --num-cols: 4;
+
+            display: grid;
+            grid-template-columns: repeat(var(--num-cols), 1fr);
+            gap: 0.5em;
+        }
+
+        @container main (width < 750px) {
+            ul {
+                --num-cols: 3;
+            }
+        }
+        @container main (width < 550px) {
+            ul {
+                --num-cols: 2;
+            }
+        }
+        @container main (width < 400px) {
+            ul {
+                --num-cols: 1;
+            }
+        }
+
+        ul > li > a {
+            width: 100%;
+            height: 100%;
+            display: block;
+            box-sizing: border-box;
+            background-color: var(--accent-color-surface);
+            border: 0.1em solid var(--on-accent-color-surface);
+            border-radius: 0.3em;
+            text-align: center;
+            text-decoration: none;
+            overflow: hidden;
+
+            display: flex;
+            flex-direction: column;
+        }
+        ul > li > a span {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            justify-content: center;
+        }
+
+        ul > li > a img {
+            width: 100%;
+            aspect-ratio: 2 / 1;
+            object-fit: cover;
+            object-position: top center;
+        }
+        ul > li > a h3 {
+            margin: 0.5em;
+        }
+    </style>
 </head>
 <body>
-    <ul>
-        <li><a href="https://notes.andreaslonn.se">Notes</a></li>
-        <li><a href="quitesecurenotes.html">Quite Secure Notes</a></li>
-        <li><a href="certviewer.html">Certificate Viewer</a></li>
-        <li><a href="https://screencolor.andreaslonn.se">Screen Color</a></li>
-        <li><a href="https://learnword.andreaslonn.se">Learn Word</a></li>
-    </ul>
-    <a href="https://github.com/AndreasLonn/andreaslonn.github.io">To GitHub</a>
+    <main>
+        <ul>
+            <li><a href="https://notes.andreaslonn.se">
+                <img alt="" src="images/notes.png">
+                <span><h3>Notes</h3></span>
+            </a></li>
+
+            <li><a href="quitesecurenotes.html">
+                <img alt="" src="images/quitesecurenotes.png">
+                <span><h3>Quite Secure Notes</h3></span>
+            </a></li>
+
+            <li><a href="certviewer.html">
+                <img alt="" src="images/certificateviewer.png">
+                <span><h3>Certificate Viewer</h3></span>
+            </a></li>
+
+            <li><a href="https://screencolor.andreaslonn.se">
+                <img alt="" src="images/screencolor.png">
+                <span><h3>Screen Color</h3></span>
+            </a></li>
+
+            <li><a href="https://learnword.andreaslonn.se">
+                <img alt="" src="images/learnword.png">
+                <span><h3>Learn Word</h3></span>
+            </a></li>
+
+            <li><a href="timecalculator.html">
+                <img alt="" src="images/timecalculator.png">
+                <span><h3>Time Calculator</h3></span>
+            </a></li>
+
+            <li><a href="checkerboard.html">
+                <img alt="" src="images/checkerboard.png">
+                <span><h3>Checkerboard Generator</h3></span>
+            </a></li>
+
+            <li><a href="https://windowsproductkeyextractor.andreaslonn.se">
+                <img alt="" src="images/windowsproductkeyextractor.png">
+                <span><h3>Windows Product Key Extractor</h3></span>
+            </a></li>
+        </ul>
+        <a href="https://github.com/AndreasLonn/andreaslonn.github.io">To GitHub</a>
+    </main>
 </body>
 </html>

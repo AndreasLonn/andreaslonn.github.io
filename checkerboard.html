@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<!--
+    +--------------+
+    | Checkerboard |
+    +--------------+
+    https://andreaslonn.se/checkerboard.html
+
+    Hello
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkerboard Generator</title>
+    <style>
+        @import url(toolstyle.css) layer(toolstyle);
+
+        form#checkerboard-params {
+            grid-area: form;
+        }
+
+        svg#svg-checkerboard-pattern {
+            grid-area: svg;
+        }
+
+        img#img-checkerboard-pattern {
+            grid-area: img;
+        }
+
+        main > label > :where(svg, img) {
+            width: 100%;
+            border: 1px solid var(--on-background-color);
+        }
+
+        main {
+            grid-template-areas: "form svg"
+                                 "form img";
+            grid-template-columns: 1fr 1fr;
+            display: grid;
+            gap: 1em;
+            width: unset;
+        }
+
+        @media (max-width: 400px) {
+            main {
+                grid-template-areas: "form"
+                                     "svg"
+                                     "img";
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <noscript>
+        <h2>This tool does not work without JavaScript. Please enable it.</h2>
+    </noscript>
+    <main>
+        <form id="checkerboard-params">
+            <label>Width
+                <input type="number" min="0" value="1920" id="input-width">
+            </label>
+
+            <label>Height
+                <input type="number" min="0" value="1080" id="input-height">
+            </label>
+
+            <label>Size
+                <input type="number" min="1" value="40" id="input-size">
+            </label>
+
+            <details open>
+                <summary>
+                    Color 1
+                    <input type="color" value="#0a0a0a" id="input-color-odd">
+                </summary>
+
+                <label>Hex
+                    <input type="text" value="#0a0a0a" id="input-color-odd-text">
+                </label>
+                <label>Red
+                    <input type="range" min="0" max="255" value="10" id="input-color-odd-r">
+                </label>
+                <label>Green
+                    <input type="range" min="0" max="255" value="10" id="input-color-odd-g">
+                </label>
+                <label>Blue
+                    <input type="range" min="0" max="255" value="10" id="input-color-odd-b">
+                </label>
+            </details>
+
+            <details open>
+                <summary>
+                    Color 2
+                    <input type="color" value="#1a1a1a" id="input-color-even">
+                </summary>
+
+                <label>Hex
+                    <input type="text" value="#1a1a1a" id="input-color-even-text">
+                </label>
+                <label>Red
+                    <input type="range" min="0" max="255" value="26" id="input-color-even-r">
+                </label>
+                <label>Green
+                    <input type="range" min="0" max="255" value="26" id="input-color-even-g">
+                </label>
+                <label>Blue
+                    <input type="range" min="0" max="255" value="26" id="input-color-even-b">
+                </label>
+            </details>
+
+            <label>
+                <span>
+                    Datatype (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types">MIME type</a>)
+                </span>
+                <input type="text" value="image/png" list="image-datatypes" id="input-datatype" />
+                <datalist id="image-datatypes">
+                    <option>image/png</option>
+                    <option>image/jpeg</option>
+                    <option>image/webp</option>
+                </datalist>
+            </label>
+
+            <button type="submit">Generate</button>
+        </form>
+
+        <label>
+            Preview (SVG)
+            <svg id="svg-checkerboard-pattern"></svg>
+        </label>
+
+        <label>
+            Result
+            <img id="img-checkerboard-pattern">
+        </label>
+    </main>
+
+    <script>
+        function q(elem, parent=document) { return parent.querySelector(elem); }
+
+        const svgElem = q('#svg-checkerboard-pattern');
+        const svgNS = "http://www.w3.org/2000/svg";
+
+        const imgElem = q('#img-checkerboard-pattern');
+
+        const formElem = q('form#checkerboard-params');
+
+        function updateCheckerboard() {
+            const elems = [];
+
+            const width = Number(q('#input-width', formElem).value);
+            const height = Number(q('#input-height', formElem).value);
+            const size = Number(q('#input-size', formElem).value);
+
+            const colorOdd = q('#input-color-odd', formElem).value;
+            const colorEven = q('#input-color-even', formElem).value;
+
+            const valid = Math.max(width / size, height / size) < 150;
+            q('#input-size').classList.toggle('invalid', !valid);
+            if(!valid) return;
+
+            svgElem.setAttributeNS(null, 'viewBox', `0 0 ${width} ${height}`);
+            svgElem.setAttributeNS(null, 'style', `background-color: ${colorOdd};`);
+
+            for(let y = 0; y * size < height; y++)
+                for(let x = 0; x * size < width; x++) {
+                    const evenX = x % 2 == 0;
+                    const evenY = y % 2 == 0;
+                    if((evenX || !evenY) && (!evenX || evenY)) continue;
+
+                    const elem = document.createElementNS(svgNS, 'rect');
+
+                    elem.setAttributeNS(null, 'x', x * size);
+                    elem.setAttributeNS(null, 'y', y * size);
+                    elem.setAttributeNS(null, 'width', size);
+                    elem.setAttributeNS(null, 'height', size);
+                    elem.setAttributeNS(null, 'fill', colorEven);
+
+                    elems.push(elem);
+                }
+
+            svgElem.replaceChildren(...elems);
+        }
+
+        formElem.addEventListener('input', event => {
+            const target = event.target;
+            console.log(event);
+
+            if(target.tagName !== 'INPUT') return;
+
+            const colorNumber = target.id.split('-')[2];
+
+            const targetColor = `input-color-${colorNumber}`;
+
+            console.log(targetColor);
+
+            if(target.type === 'range') {
+                console.log('Range input');
+                const valR = Number(q(`#${targetColor}-r`).value);
+                const valG = Number(q(`#${targetColor}-g`).value);
+                const valB = Number(q(`#${targetColor}-b`).value);
+
+                const hexStr = `#${valR.toString(16).padStart(2, '0')}${valG.toString(16).padStart(2, '0')}${valB.toString(16).padStart(2, '0')}`;
+
+                q(`#${targetColor}`).value = hexStr;
+                q(`#${targetColor}-text`).value = hexStr;
+            }
+            else if(target.type === 'text' && colorNumber) {
+                console.log('Text input');
+
+                let hexStr = q(`#${targetColor}-text`).value.trim();
+
+                if(hexStr.length === 3)
+                    hexStr = `#${hexStr[0]}${hexStr[0]}${hexStr[1]}${hexStr[1]}${hexStr[2]}${hexStr[2]}`;
+                else if(hexStr.length === 4)
+                    hexStr = `#${hexStr[1]}${hexStr[1]}${hexStr[2]}${hexStr[2]}${hexStr[3]}${hexStr[3]}`;
+
+                const valid = /#(\d|[a-f]|[A-F]){6}/.test(hexStr);
+                q(`#${targetColor}-text`).classList.toggle('invalid', !valid);
+                console.log('valid', valid);
+
+                if(!valid) return;
+
+                const valR = parseInt(hexStr.substr(1, 2), 16);
+                const valG = parseInt(hexStr.substr(3, 2), 16);
+                const valB = parseInt(hexStr.substr(5, 2), 16);
+
+                q(`#${targetColor}-r`).value = valR;
+                q(`#${targetColor}-g`).value = valG;
+                q(`#${targetColor}-b`).value = valB;
+
+                q(`#${targetColor}`).value = hexStr;
+            }
+            else if(target.type === 'color') {
+                console.log('Color input');
+                const hexStr = q(`#${targetColor}`).value;
+
+                const valR = parseInt(hexStr.substr(1, 2), 16);
+                const valG = parseInt(hexStr.substr(3, 2), 16);
+                const valB = parseInt(hexStr.substr(5, 2), 16);
+
+                q(`#${targetColor}-r`).value = valR;
+                q(`#${targetColor}-g`).value = valG;
+                q(`#${targetColor}-b`).value = valB;
+
+                q(`#${targetColor}-text`).value = hexStr;
+            }
+
+            updateCheckerboard();
+        });
+
+        async function makeImage(datatype='image/png') {
+            // https://stackoverflow.com/a/74026755/6542268
+
+            const svgDataHeader = 'data:image/svg+xml;charset=utf-8';
+
+            const loadImage = async url => {
+                const tempImgElem = document.createElement('img');
+                tempImgElem.src = url;
+                return new Promise((resolve, reject) => {
+                    tempImgElem.onload = () => resolve(tempImgElem);
+                    tempImgElem.onerror = reject;
+                });
+            }
+
+            const encodeAsUTF8 = str => `${svgDataHeader},${encodeURIComponent(str)}`;
+            const encodeAsB64 = str => `${svgDataHeader};base64,${btoa(str)}`;
+
+            const xmlString = encodeAsUTF8(new XMLSerializer().serializeToString(svgElem));
+
+            const img = await loadImage(xmlString);
+
+            const width = q('#input-width', formElem).value;
+            const height = q('#input-height', formElem).value;
+
+            const canvasElem = document.createElement('canvas');
+            canvasElem.width = width;
+            canvasElem.height = height;
+            canvasElem.getContext('2d').drawImage(img, 0, 0, width, height);
+
+            const dataURL = await canvasElem.toDataURL(datatype, 1.0);
+
+            imgElem.src = dataURL;
+        }
+
+        formElem.addEventListener('submit', event => {
+            event.preventDefault();
+
+            makeImage(q('#input-datatype', formElem).value);
+        });
+
+        updateCheckerboard();
+    </script>
+</body>
+</html>

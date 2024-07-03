@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Calculator</title>
+    <style>
+        @import url(toolstyle.css) layer(toolstyle);
+
+        :root {
+            /* --background-color: #00f; */
+        }
+
+        main {
+            display: grid;
+            grid-template-areas: "h1 h1"
+                                 "times aside";
+            grid-template-columns: 1fr 1fr;
+        }
+        @media (max-width: 500px) {
+            main {
+                grid-template-areas: "h1"
+                                     "times"
+                                     "aside";
+                grid-template-columns: unset;
+            }
+        }
+
+        h1 {
+            grid-area: h1;
+        }
+        section {
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+        }
+        section > h2 {
+            margin: 0;
+        }
+
+        #times {
+            grid-area: times;
+        }
+
+        #list-time {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            gap: 0.5em;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #list-time > li {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+        #list-time > li:first-child > :first-child {
+            display: none;
+        }
+
+        #list-time:not(.action-buttons-visible) .action-buttons {
+            display: none;
+        }
+
+        #list-time > li > div {
+            display: flex;
+            gap: 1em;
+        }
+
+        #list-time input[type=text]:valid {
+            outline: 1px solid green;
+        }
+        #list-time input[type=text]:not(:valid):not(:disabled) {
+            outline: 1px solid red;
+        }
+
+        aside {
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+            grid-area: aside;
+        }
+        aside > section > label {
+            display: flex;
+            flex-direction: column;
+            width: max-content;
+        }
+        aside > section > div {
+            display: flex;
+            gap: 0.5em;
+        }
+    </style>
+</head>
+<body class="monospace">
+    <template id="template-item-time">
+        <li>
+            <div>
+                <input type="text" pattern="-?[0-9]+:[0-9]{2}:[0-9]{2}.[0-9]{3}" value="00:00:00.000" class="length time-relative">
+                <div class="action-buttons">
+                    <button type="button" class="btn-down" aria-label="Move down">\/</button>
+                    <button type="button" class="btn-up" aria-label="Move up">/\</button>
+                    <button type="button" class="btn-rem">Remove</button>
+                </div>
+            </div>
+            <label>
+                <input type="radio" name="locked">
+                <input type="text" pattern="-?[0-9]+:[0-9]{2}:[0-9]{2}.[0-9]{3}" value="00:00:00.000" class="after time-absolute" disabled>
+            </label>
+        </li>
+    </template>
+
+    <noscript>
+        <h2>This tool does not work without JavaScript. Please enable it.</h2>
+    </noscript>
+    <main>
+        <h1>Time Calculator</h1>
+        <section id="times">
+            <h2>Times</h2>
+            <ol id="list-time"></ol>
+            <div id="action-buttons">
+                <button id="btn-add" type="button">+</button>
+                <button id="btn-edit" type="button">Edit</button>
+            </div>
+        </section>
+        <aside>
+            <section id="stats">
+                <h2>Stats</h2>
+                <label id="stats-length">
+                    Length
+                    <input type="text" readonly>
+                </label>
+                <label id="stats-json">
+                    JSON
+                    <textarea readonly></textarea>
+                </label>
+                <label id="stats-json-input">
+                    JSON input
+                    <textarea>[[2,23450202],22009000,27676112,30815132,33619021]</textarea>
+                    <button type="button">Update</button>
+                </label>
+            </section>
+            <section id="settings">
+                <h2>Settings</h2>
+                <div>
+                    <input type="checkbox" id="settings-24h" checked>
+                    <label for="settings-24h">24 hour format</label>
+                </div>
+            </section>
+        </aside>
+    </main>
+    <script>
+        function q(elem, parent=document) { return parent.querySelector(elem); }
+        function qs(elems, parent=document) { return parent.querySelectorAll(elems); }
+
+        const templateItemTime = q('template#template-item-time').content.firstElementChild;
+        const timeList = q('#list-time');
+        const buttonAdd = q('#btn-add');
+        const statsLength = q('#stats-length input');
+        const statsJson = q('#stats-json textarea');
+        const statsJsonInput = q('#stats-json-input textarea');
+        const statsJsonInputButton = q('#stats-json-input button');
+        const settingsElem = q('#settings');
+        const settings = (key) => {
+            const setting = q(`#settings-${key}`);
+            switch(setting.type) {
+                case 'checkbox':
+                    return setting.checked;
+            }
+        };
+
+        function formatTime(val, override24h) {
+            const dayMillis = 24 * 60 * 60 * 1000;
+            let negative = val < 0;
+            val = Math.abs(val);
+
+            if((override24h === undefined && settings('24h')) || override24h) {
+                val %= dayMillis;
+                if(negative) {
+                    negative = false;
+                    val = dayMillis - val;
+                }
+            }
+
+            function formatNum(num, type) {
+                let outputLength = 0;
+                let value = 0;
+
+                switch(type) {
+                    case 'h':
+                        outputLength = 2;
+                        value = Math.floor(num / (60 * 60 * 1000));
+                        break;
+                    case 'm':
+                        outputLength = 2;
+                        value = Math.floor((num / (60 * 1000)) % 60);
+                        break;
+                    case 's':
+                        outputLength = 2;
+                        value = Math.floor((num / 1000) % 60);
+                        break;
+                    case 'ms':
+                        outputLength = 3;
+                        value = Math.floor(num % 1000);
+                        break;
+
+                    default: throw `Unknown type: "${type}"`;
+                }
+
+                const len = Math.max(Math.floor(Math.log10(value) + 1), 1);
+
+                const charsToAdd = outputLength - len;
+
+                if(charsToAdd <= 0) return value;
+
+                return Array(outputLength - len + 1).join('0') + value;
+            }
+
+            return `${negative ? '-' : ''}${formatNum(val, 'h')}:${formatNum(val, 'm')}:${formatNum(val, 's')}.${formatNum(val, 'ms')}`;
+        }
+        function parseTime(str) {
+            const negative = str.length > 0 && str[0] === '-';
+            if(negative) str = str.substr(1);
+
+            const h_m_s_ms = str.split(':');
+            const s_ms = h_m_s_ms[2].split('.');
+
+            const h = Number(h_m_s_ms[0]);
+            const m = Number(h_m_s_ms[1]);
+            const s = Number(s_ms[0]);
+            const ms = Number(s_ms[1]);
+
+            return Number((negative ? -1 : 1) * ((((h * 60 + m) * 60 + s) * 1000) + ms));
+        }
+
+        function markSelected(elemOrIndex, newValue) {
+            const targetElem =
+                (typeof elemOrIndex === 'string') ?
+                    q(elemOrIndex) :
+                    (typeof elemOrIndex === 'number') ?
+                        qs('input[type="radio"]')[elemOrIndex].parentElement :
+                        elemOrIndex;
+
+            q('input[type="radio"]', targetElem).checked = true;
+
+            qs('input[type="radio"] + input[type="text"]').forEach(elem => elem.disabled = true);
+            const selectedInput = q('input[type="radio"] + input[type="text"]', targetElem);
+            selectedInput.disabled = false;
+            if(newValue !== undefined) selectedInput.value = formatTime(newValue);
+        }
+
+        function updateTimes() {
+            qs('li :is(.btn-up, .btn-down)', timeList).forEach(elem => elem.disabled = false);
+            q('li:nth-child(2) .btn-up', timeList).disabled = true;
+            q('li:last-child .btn-down', timeList).disabled = true;
+
+            let totalBefore = 0;
+            let totalAfter = 0;
+
+            let isAllValid = true;
+
+            let values = [];
+
+            if(timeList.children.length === 0) return;
+
+            const timeElems = Array.from(qs('li', timeList));
+
+            const selectedAbsolute = (q('input[name="locked"]:checked') || q('input[name="locked"]')).closest('li');
+            const indexOfAbsolute = timeElems.indexOf(selectedAbsolute);
+            const absoluteTimeElem = q('input[type="text"].after', selectedAbsolute);
+            if(!absoluteTimeElem.checkValidity()) return;
+            const absoluteTime = parseTime(absoluteTimeElem.value);
+
+            for(let i = indexOfAbsolute; i >= 0; i--) {
+                const elemListItem = timeElems[i];
+                const elemInputLength = q('input.length', elemListItem);
+                const elemInputAfter = q('input.after', elemListItem);
+
+                if(!elemInputLength.checkValidity()) {
+                    isAllValid = false;
+                    break;
+                }
+
+                if(i !== indexOfAbsolute) {
+                    elemInputAfter.value = formatTime(absoluteTime - totalBefore);
+                }
+
+                if(i > 0) {
+                    const val = parseTime(elemInputLength.value);
+                    values.push(val);
+                    totalBefore += val;
+                }
+            }
+
+            values.push([indexOfAbsolute, absoluteTime]);
+
+            values.reverse();
+
+            for(let i = indexOfAbsolute + 1; i < timeElems.length; i++) {
+                const elemListItem = timeElems[i];
+                const elemInputLength = q('input.length', elemListItem);
+                const elemInputAfter = q('input.after', elemListItem);
+
+                if(!elemInputLength.checkValidity()) {
+                    isAllValid = false;
+                    break;
+                }
+
+                const val = parseTime(elemInputLength.value);
+                values.push(val);
+                totalAfter += val;
+
+                elemInputAfter.value = formatTime(absoluteTime + totalAfter);
+            }
+
+            statsLength.value = isAllValid ? formatTime(totalBefore + totalAfter, false) : 'Invalid';
+
+            const jsonStr = JSON.stringify(values);
+
+            statsJson.value = jsonStr;
+            window.location.hash = jsonStr;
+        }
+
+        function setFromData(newData) {
+            const newElems = [];
+
+            newData.forEach((time, i) => {
+                const newElem = templateItemTime.cloneNode(true);
+
+                q('input.length', newElem).value = formatTime(i > 0 ? time : 0);
+
+                newElems.push(newElem);
+            });
+
+            timeList.replaceChildren(...newElems);
+
+            qs('input[type="text"].after')[newData[0][0]].value = formatTime(newData[0][1]);
+            markSelected(newData[0][0]);
+
+            updateTimes();
+        }
+
+        q('#action-buttons').addEventListener('click', event => {
+            event.preventDefault();
+
+            const clickedButton = event.target.closest('button');
+            if(clickedButton === null) return;
+
+            switch(clickedButton.id) {
+                case 'btn-add':
+                    const newElem = templateItemTime.cloneNode(true);
+
+                    timeList.appendChild(newElem);
+
+                    if(timeList.children.length === 1) {
+                        timeList.appendChild(templateItemTime.cloneNode(true));
+                        markSelected(newElem);
+                    }
+
+                    updateTimes();
+                    break;
+                case 'btn-edit':
+                    timeList.classList.toggle('action-buttons-visible');
+                    break;
+            }
+        });
+
+        timeList.addEventListener('input', event => {
+            event.preventDefault();
+
+            if(clickedRadioButton = event.target.closest('input[type="radio"]'))
+                markSelected(clickedRadioButton.parentElement);
+
+            updateTimes();
+        });
+
+        timeList.addEventListener('click', event => {
+            const clickedButton = event.target.closest('button');
+            if(clickedButton === null) return;
+
+            const clickedButtonListItem = clickedButton.closest('li');
+
+            event.preventDefault();
+
+            if (clickedButton.classList.contains('btn-rem')) {
+                clickedButtonListItem.remove();
+                if(timeList.children.length === 1) q('li', timeList).remove();
+            } else {
+                const timeListItems = Array.from(qs('li', timeList));
+                const clickedIndex = timeListItems.indexOf(clickedButtonListItem);
+                const selectedAbsolute = (q('input[name="locked"]:checked') || q('input[name="locked"]')).closest('li');
+                const selectedAbsoluteVal = parseTime(q('input[type="text"].after', selectedAbsolute).value);
+                const timeElems = Array.from(qs('li', timeList));
+                const indexOfAbsolute = timeElems.indexOf(selectedAbsolute);
+
+                if (clickedButton.classList.contains('btn-up')) {
+                    if(clickedIndex <= 1) return;
+                    timeList.insertBefore(clickedButtonListItem, timeListItems[clickedIndex - 1]);
+                    markSelected(indexOfAbsolute, selectedAbsoluteVal);
+                }
+                else if (clickedButton.classList.contains('btn-down')) {
+                    if(clickedIndex === timeListItems.length - 1) return;
+                    timeList.insertBefore(timeListItems[clickedIndex + 1], clickedButtonListItem);
+                    markSelected(indexOfAbsolute, selectedAbsoluteVal);
+                }
+            }
+
+            updateTimes();
+        });
+
+        statsJsonInputButton.addEventListener('click', event => {
+            event.preventDefault();
+            setFromData(JSON.parse(statsJsonInput.value));
+        });
+
+        settingsElem.addEventListener('input', event => {
+            updateTimes();
+        });
+
+        if(window.location.hash) {
+            try {
+                setFromData(JSON.parse(window.location.hash.substr(1)));
+            } catch(exception) {
+                console.error('Couldn\'t decode JSON:', exception);
+            }
+        }
+    </script>
+</body>
+</html>

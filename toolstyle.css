@@ -1,0 +1,130 @@
+/*
+
+    +-----------+
+    | ToolStyle |
+    +-----------+
+    https://andreaslonn.se/toolstyle.css
+
+    Hello
+
+*/
+
+/* #region Setup */
+
+:root {
+    --background-color: #0f0;
+    --on-background-color: #000;
+
+    color-scheme: light dark;
+
+    min-width: 100vw;
+    min-height: 100vh;
+
+    background-color: var(--background-color);
+    color: var(--on-background-color);
+
+    font-family: monospace;
+    font-size: 1.2em;
+}
+
+* {
+    font-family: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: #222;
+        --on-background-color: #fff;
+    }
+}
+
+/* #region noscript */
+
+noscript h2 {
+    width: 100%;
+    text-align: center;
+    padding: 0.5em;
+    box-sizing: border-box;
+
+    --color-1: red;
+    --color-2: white;
+    border: dashed 0.5em var(--color-1);
+    background-image: linear-gradient(var(--background-color), var(--background-color)), linear-gradient(var(--color-2), var(--color-2));
+    background-clip: padding-box, border-box;
+    animation: flash-noscript 2s infinite;
+}
+
+@keyframes flash-noscript {
+    from, to {
+        --color-1: white;
+        --color-2: red;
+    }
+    50% {
+        --color-1: red;
+        --color-2: white;
+    }
+}
+
+/* #endregion noscript */
+
+/* #endregion Setup */
+
+/* #region General */
+
+.monospace {
+    font-family: monospace;
+}
+
+/* endregion General */
+
+/* #region Main */
+
+main {
+    width: 750px;
+    margin: auto;
+    max-width: 90%;
+}
+
+/* #endregion Main */
+
+/* #region Forms and inputs */
+
+form,
+form fieldset,
+form label {
+    display: flex;
+    flex-direction: column;
+}
+form {
+    gap: 1em;
+}
+form fieldset {
+    margin: 0;
+}
+form .invalid {
+    outline: red 1px solid;
+}
+
+input[type=color] {
+    height: 1.5em;
+    padding: 0.1em;
+}
+
+/* #endregion Forms and inputs */
+
+/* #region details */
+
+details {
+    --border-style: solid 0.1em var(--on-background-color);
+    border: var(--border-style);
+    padding: 0.5em;
+}
+
+details[open] summary {
+    border-bottom: var(--border-style);
+    margin: 0 -0.5em;
+    padding: 0.5em;
+    padding-top: 0;
+}
+
+/* #endregion details */
