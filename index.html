@@ -13,6 +13,8 @@
             --on-accent-color: #000;
             --accent-color-surface: #233;
             --on-accent-color-surface: #fff;
+            --on-accent-color-surface-not-visited: #8f8;
+            --on-accent-color-surface-visited: #4c4;
         }
 
         main {
@@ -57,10 +59,15 @@
             text-align: center;
             text-decoration: none;
             overflow: hidden;
+            color: var(--on-accent-color-surface-not-visited);
 
             display: flex;
             flex-direction: column;
         }
+        ul > li > a:visited {
+            color: var(--on-accent-color-surface-visited);
+        }
+
         ul > li > a span {
             display: flex;
             flex-direction: column;
