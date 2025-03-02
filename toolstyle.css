@@ -7,13 +7,18 @@
 
     Hello
 
+    v1.1
+
 */
 
 /* #region Setup */
 
 :root {
     --background-color: #fff;
+    --background-color-alt: #eee;
+    --background-color-warning: red;
     --on-background-color: #000;
+    --on-background-color-warning: #fff;
 
     color-scheme: light dark;
 
@@ -34,7 +39,10 @@
 @media (prefers-color-scheme: dark) {
     :root {
         --background-color: #222;
+        --background-color-alt: #333;
+        --background-color-warning: darkred;
         --on-background-color: #fff;
+        --on-background-color-warning: #fff;
     }
 }
 

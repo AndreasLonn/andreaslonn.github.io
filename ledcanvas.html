@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Canvas Generator</title>
+    <style>
+        @import url(toolstyle.css) layer(toolstyle);
+
+        h1 {
+            grid-area: h1;
+            margin-bottom: 0;
+        }
+
+        #warning {
+            grid-area: warn;
+            display: none;
+            background-color: var(--background-color-warning);
+            color: var(--on-background-color-warning);
+            border: 0.1em solid var(--on-background-color-warning);
+            padding: 0.5em;
+        }
+        #warning.open {
+            display: initial;
+        }
+
+        form#params {
+            grid-area: form;
+        }
+
+        label:has(svg#svg-preview) {
+            grid-area: svg;
+        }
+
+        label:has(img#img-preview) {
+            grid-area: img;
+        }
+
+        main > label > :where(svg, img) {
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--on-background-color);
+        }
+
+        textarea#input-json {
+            height: 15em;
+        }
+
+        main {
+            grid-template-areas: "h1   h1"
+                                 "warn warn"
+                                 "form svg"
+                                 "form img";
+            grid-template-columns: 1fr 1fr;
+            display: grid;
+            gap: 1em;
+            width: unset;
+        }
+
+        @media (max-width: 400px) {
+            main {
+                grid-template-areas: "h1"
+                                     "warn"
+                                     "form"
+                                     "svg"
+                                     "img";
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <script src="js/png-generator.js"></script>
+</head>
+<body>
+    <noscript>
+        <h2>This tool does not work without JavaScript. Please enable it.</h2>
+    </noscript>
+    <main>
+        <h1>LED Canvas Generator</h1>
+        <div id="warning">
+            <span></span>
+            <button>Close</button>
+        </div>
+        <form id="params">
+            <label>JSON
+                <textarea id="input-json">[
+  { "w": 384, "h": 1152, "x": 0, "y": 0, "name": "ll" },
+  { "w": 384, "h": 1152, "x": 768, "y": 0, "name": "lr" },
+  { "w": 2112, "h": 1152, "x": 1536, "y": 0, "name": "main" },
+  { "w": 384, "h": 1152, "x": 4032, "y": 0, "name": "rl" },
+  { "w": 384, "h": 1152, "x": 4800, "y": 0, "name": "rr" }
+]</textarea>
+            </label>
+
+            <label>Panel Width
+                <input type="number" min="0" value="192" id="panel-width">
+            </label>
+            <label>Panel Height
+                <input type="number" min="0" value="192" id="panel-height">
+            </label>
+
+            <label>
+                <span>
+                    Datatype (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types">MIME type</a>)
+                </span>
+                <input type="text" value="image/png" list="image-datatypes" id="input-datatype" />
+                <datalist id="image-datatypes">
+                    <option>image/png</option>
+                    <option>image/jpeg</option>
+                    <option>image/webp</option>
+                </datalist>
+            </label>
+
+            <button type="submit">Generate</button>
+        </form>
+
+        <label>
+            Preview (SVG)
+            <svg id="svg-preview"></svg>
+        </label>
+
+        <label>
+            Result
+            <img id="img-preview">
+        </label>
+    </main>
+
+    <script type="module">
+        function q(elem, parent=document) { return parent.querySelector(elem); }
+
+        const svgElem = q('#svg-preview');
+        const svgNS = "http://www.w3.org/2000/svg";
+
+        const imgElem = q('#img-preview');
+
+        const formElem = q('form#params');
+
+        const warnDialog = q('#warning');
+
+        function showWarning(message) {
+            q('span', warnDialog).textContent = message;
+            warnDialog.classList.add('open');
+        }
+        function hideWarning() {
+            warnDialog.classList.remove('open');
+        }
+        q('button', warnDialog).addEventListener('click', () => hideWarning());
+
+        function updateCanvas() {
+            let screens;
+
+            try {
+                screens = JSON.parse(q('#input-json', formElem).value);
+            } catch(exception) {
+                console.error('Unable to parse JSON:', exception);
+                throw 'Invalid JSON';
+            }
+
+            const panelWidth = Number(q('#panel-width', formElem).value);
+            const panelHeight = Number(q('#panel-height', formElem).value);
+
+            let totalWidth = 0;
+            let totalHeight = 0;
+
+            screens.forEach(screen => {
+                if (screen.x + screen.w > totalWidth) {
+                    totalWidth = screen.x + screen.w;
+                }
+                if (screen.y + screen.h > totalHeight) {
+                    totalHeight = screen.y + screen.h;
+                }
+            });
+
+            svgElem.setAttributeNS(null, 'width', totalWidth);
+            svgElem.setAttributeNS(null, 'height', totalHeight);
+            svgElem.setAttributeNS(null, 'viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+
+            const colors = ['#a00', '#0a0', '#00a'];
+            const textOffsetX = panelHeight / 30;
+            const textOffsetY = panelHeight / 20;
+
+            svgElem.innerHTML = `  <defs>
+    <filter x="-0.05" y="-0.05" width="1.1" height="1.1" style="border-radius: 20px" id="solid">
+      <feFlood flood-color="#0007" result="bg" />
+      <feMerge>
+        <feMergeNode in="bg"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <style>
+    text {
+      font: ${panelHeight / 6}px monospace;
+      fill: #fff;
+      dominant-baseline: hanging;
+    }
+    text.name {
+      font-size: ${panelHeight * 0.6}px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      filter :url(#solid);
+      padding: 10px;
+    }
+  </style>
+  <g id="screens">
+  </g>
+}`;
+            const screensElem = q('#screens', svgElem);
+
+            screens.forEach(screen => {
+                const screenElem = document.createElementNS(svgNS, 'g');
+
+                ['w', 'h', 'x', 'y', 'name'].forEach(prop => {
+                    if(!screen.hasOwnProperty(prop)) {
+                        console.error(`Screen "${JSON.stringify(screen)}" has no property "${prop}"`);
+                        throw `Screen "${JSON.stringify(screen)}" has no property "${prop}"`;
+                    }
+                });
+
+                if(screen.w % panelWidth != 0 || screen.h % panelHeight != 0) {
+                    console.error(`screen.w: ${screen.w}, panelWidth: ${panelWidth}, w%pW = ${screen.w % panelWidth}
+screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHeight}`);
+                    throw 'Panel width or height is not divisable by panel size';
+                }
+
+                for (let ix = 0; ix < Math.floor(screen.w / panelWidth); ix++) {
+                    for (let iy = 0; iy < Math.floor(screen.h / panelHeight); iy++) {
+                        const x = screen.x + ix * panelWidth;
+                        const y = screen.y + iy * panelHeight;
+
+                        const rectElem = document.createElementNS(svgNS, 'rect');
+                        rectElem.setAttributeNS(null, 'x', x);
+                        rectElem.setAttributeNS(null, 'y', y);
+                        rectElem.setAttributeNS(null, 'width', panelWidth);
+                        rectElem.setAttributeNS(null, 'height', panelHeight);
+                        rectElem.setAttributeNS(null, 'fill', colors[(ix + iy) % colors.length]);
+                        screenElem.appendChild(rectElem);
+
+                        const textElem = document.createElementNS(svgNS, 'text');
+                        textElem.setAttributeNS(null, 'x', x + textOffsetX);
+                        textElem.setAttributeNS(null, 'y', y + textOffsetY);
+                        textElem.textContent = `${ix + 1},${iy + 1}`;
+                        screenElem.appendChild(textElem);
+                    }
+                }
+                const textElem = document.createElementNS(svgNS, 'text');
+                textElem.setAttributeNS(null, 'x', screen.x + screen.w / 2);
+                textElem.setAttributeNS(null, 'y', screen.y + screen.h / 2);
+                textElem.textContent = screen.name;
+                textElem.classList.add('name');
+                screenElem.appendChild(textElem);
+
+                screensElem.appendChild(screenElem);
+            });
+        }
+
+        formElem.addEventListener('input', event => {
+            try {
+                updateCanvas();
+                hideWarning();
+            } catch(exception) {
+                showWarning(exception);
+            }
+        });
+
+        formElem.addEventListener('submit', event => {
+            event.preventDefault();
+
+            const svgBox = svgElem.getBBox();
+            const width = svgBox.width;
+            const height = svgBox.height;
+            const datatype = q('#input-datatype', formElem).value;
+
+            console.log(svgElem, svgBox, width, height, datatype);
+
+            makeImage(width, height, svgElem, imgElem, datatype);
+        });
+
+        updateCanvas();
+    </script>
+</body>
+</html>
