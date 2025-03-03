@@ -110,6 +110,10 @@
                 </datalist>
             </label>
 
+            <label>Link
+                <a id="output-link">Link to current settings</a>
+            </label>
+
             <button type="submit">Generate</button>
         </form>
 
@@ -145,6 +149,23 @@
         }
         q('button', warnDialog).addEventListener('click', () => hideWarning());
 
+        (() => {
+            const search = new URLSearchParams(window.location.search);
+
+            if(search.has('data')) {
+                try {
+                    const data = JSON.parse(atob(search.get('data').replace(/_/g, '/').replace(/-/g, '+')));
+                    if(data.hasOwnProperty('input-json')) q('#input-json', formElem).value = data['input-json'];
+                    if(data.hasOwnProperty('panel-width')) q('#panel-width', formElem).value = data['panel-width'];
+                    if(data.hasOwnProperty('panel-height')) q('#panel-height', formElem).value = data['panel-height'];
+                    window.history.replaceState(null, null, "?");
+                } catch(exception) {
+                    console.error('Unable to read data from URL params:', exception);
+                    showWarning('Unable to decode data from URL');
+                }
+            }
+        })();
+
         function updateCanvas() {
             let screens;
 
@@ -157,6 +178,12 @@
 
             const panelWidth = Number(q('#panel-width', formElem).value);
             const panelHeight = Number(q('#panel-height', formElem).value);
+
+            q('#output-link', formElem).href = `ledcanvas.html?data=${btoa(JSON.stringify({
+                'input-json': q('#input-json', formElem).value,
+                'panel-width': panelWidth,
+                'panel-height': panelHeight
+            }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`;
 
             let totalWidth = 0;
             let totalHeight = 0;
@@ -178,8 +205,10 @@
             const textOffsetX = panelHeight / 30;
             const textOffsetY = panelHeight / 20;
 
+            const fontSize = panelHeight / 6;
+
             svgElem.innerHTML = `  <defs>
-    <filter x="-0.05" y="-0.05" width="1.1" height="1.1" style="border-radius: 20px" id="solid">
+    <filter x="-0.05" y="-0.05" width="1.1" height="1.1" id="solid">
       <feFlood flood-color="#0007" result="bg" />
       <feMerge>
         <feMergeNode in="bg"/>
@@ -189,7 +218,7 @@
   </defs>
   <style>
     text {
-      font: ${panelHeight / 6}px monospace;
+      font: ${fontSize}px monospace;
       fill: #fff;
       dominant-baseline: hanging;
     }
@@ -200,10 +229,13 @@
       filter :url(#solid);
       padding: 10px;
     }
+    text.res,
+    text.offset {
+      dominant-baseline: auto;
+    }
   </style>
-  <g id="screens">
-  </g>
-}`;
+  <g id="screens"></g>
+`;
             const screensElem = q('#screens', svgElem);
 
             screens.forEach(screen => {
@@ -232,7 +264,7 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
                         rectElem.setAttributeNS(null, 'y', y);
                         rectElem.setAttributeNS(null, 'width', panelWidth);
                         rectElem.setAttributeNS(null, 'height', panelHeight);
-                        rectElem.setAttributeNS(null, 'fill', colors[(ix + iy) % colors.length]);
+                        rectElem.setAttributeNS(null, 'fill', colors[(Math.round((screen.x + x) / panelHeight) + Math.round((screen.y + y) / panelWidth)) % colors.length]);
                         screenElem.appendChild(rectElem);
 
                         const textElem = document.createElementNS(svgNS, 'text');
@@ -242,15 +274,32 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
                         screenElem.appendChild(textElem);
                     }
                 }
-                const textElem = document.createElementNS(svgNS, 'text');
-                textElem.setAttributeNS(null, 'x', screen.x + screen.w / 2);
-                textElem.setAttributeNS(null, 'y', screen.y + screen.h / 2);
-                textElem.textContent = screen.name;
-                textElem.classList.add('name');
-                screenElem.appendChild(textElem);
+
+                const nameTextElem = document.createElementNS(svgNS, 'text');
+                nameTextElem.setAttributeNS(null, 'x', screen.x + screen.w / 2);
+                nameTextElem.setAttributeNS(null, 'y', screen.y + screen.h / 2);
+                nameTextElem.textContent = screen.name;
+                nameTextElem.classList.add('name');
+                screenElem.appendChild(nameTextElem);
+
+                const resTextElem = document.createElementNS(svgNS, 'text');
+                resTextElem.setAttributeNS(null, 'x', screen.x + textOffsetX);
+                resTextElem.setAttributeNS(null, 'y', screen.y + screen.h - textOffsetY);
+                resTextElem.textContent = `${screen.w}x${screen.h}`;
+                resTextElem.classList.add('res');
+                screenElem.appendChild(resTextElem);
+
+                const offsetTextElem = document.createElementNS(svgNS, 'text');
+                offsetTextElem.setAttributeNS(null, 'x', screen.x + textOffsetX);
+                offsetTextElem.setAttributeNS(null, 'y', screen.y + screen.h - fontSize * 1.5 - textOffsetY);
+                offsetTextElem.textContent = `(${screen.x},${screen.y})`;
+                offsetTextElem.classList.add('offset');
+                screenElem.appendChild(offsetTextElem);
 
                 screensElem.appendChild(screenElem);
             });
+
+            imgElem.src = '';
         }
 
         formElem.addEventListener('input', event => {
@@ -269,8 +318,6 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
             const width = svgBox.width;
             const height = svgBox.height;
             const datatype = q('#input-datatype', formElem).value;
-
-            console.log(svgElem, svgBox, width, height, datatype);
 
             makeImage(width, height, svgElem, imgElem, datatype);
         });
