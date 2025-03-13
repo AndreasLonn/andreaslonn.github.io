@@ -170,6 +170,7 @@
                     if(data.hasOwnProperty('input-json')) q('#input-json', formElem).value = data['input-json'];
                     if(data.hasOwnProperty('panel-width')) q('#panel-width', formElem).value = data['panel-width'];
                     if(data.hasOwnProperty('panel-height')) q('#panel-height', formElem).value = data['panel-height'];
+                    if(data.hasOwnProperty('show-mask')) q('#show-mask', formElem).checked = data['show-mask'];
                     window.history.replaceState(null, null, "?");
                 } catch(exception) {
                     console.error('Unable to read data from URL params:', exception);
