@@ -57,6 +57,13 @@
             width: unset;
         }
 
+        svg#svg-preview,
+        img#img-preview {
+            background: url('images/checkerboard_128x128_8.png');
+            background-size: 50%;
+            image-rendering: pixelated;
+        }
+
         @media (max-width: 400px) {
             main {
                 grid-template-areas: "h1"
@@ -97,6 +104,11 @@
             <label>Panel Height
                 <input type="number" min="0" value="192" id="panel-height">
             </label>
+
+            <div>
+                <input type="checkbox" id="show-mask">
+                <label for="show-mask" >Automatically calculated mask</label>
+            </div>
 
             <label>
                 <span>
@@ -166,6 +178,28 @@
             }
         })();
 
+        function calculateElemWidthAndFontSize(elem) {
+            svgElem.appendChild(elem);
+            const width = elem.getBBox().width;
+            const fontSize = window.getComputedStyle(elem).fontSize;
+            elem.parentNode.removeChild(elem);
+            return {
+                width: width,
+                fontSize: fontSize,
+            };
+        }
+
+        function restrictedTextWidth(elem, restrictedWidth) {
+            const textBBoxAndStyle = calculateElemWidthAndFontSize(elem);
+            const currentFontSize = Number(textBBoxAndStyle.fontSize.replace('px', ''));
+            const targetScaleFactor = restrictedWidth / textBBoxAndStyle.width;
+            return `${Math.min(currentFontSize * targetScaleFactor, currentFontSize)}px`;
+        }
+
+        function pixelMin(a, b) {
+            return Math.min(Number(a.replace('px','')), Number(b.replace('px','')));
+        }
+
         function updateCanvas() {
             let screens;
 
@@ -179,14 +213,19 @@
             const panelWidth = Number(q('#panel-width', formElem).value);
             const panelHeight = Number(q('#panel-height', formElem).value);
 
+            const showMask = q('#show-mask', formElem).checked;
+
             q('#output-link', formElem).href = `ledcanvas.html?data=${btoa(JSON.stringify({
                 'input-json': q('#input-json', formElem).value,
                 'panel-width': panelWidth,
-                'panel-height': panelHeight
+                'panel-height': panelHeight,
+                'show-mask': showMask,
             }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`;
 
             let totalWidth = 0;
             let totalHeight = 0;
+            let allSameHeightAndY = true;
+            let allSameWidthAndX = true;
 
             screens.forEach(screen => {
                 if (screen.x + screen.w > totalWidth) {
@@ -195,7 +234,12 @@
                 if (screen.y + screen.h > totalHeight) {
                     totalHeight = screen.y + screen.h;
                 }
+                allSameWidthAndX &&= screen.w === totalWidth;
+                allSameHeightAndY &&= screen.h === totalHeight;
             });
+
+            if(allSameWidthAndX) screens.sort((s1, s2) => s1.y > s2.y ? 1 : s1.y < s2.y ? -1 : 0);
+            else if(allSameHeightAndY) screens.sort((s1, s2) => s1.x > s2.x ? 1 : s1.x < s2.x ? -1 : 0);
 
             svgElem.setAttributeNS(null, 'width', totalWidth);
             svgElem.setAttributeNS(null, 'height', totalHeight);
@@ -206,6 +250,10 @@
             const textOffsetY = panelHeight / 20;
 
             const fontSize = panelHeight / 6;
+
+            // If the outline is always divisible by 2, the outline rect
+            // can be made smaller to pixel-perfectly fit inside screen area
+            const outlineSize = Math.round(Math.min(panelWidth, panelHeight) / 50 / 2) * 2;
 
             svgElem.innerHTML = `  <defs>
     <filter x="-0.05" y="-0.05" width="1.1" height="1.1" id="solid">
@@ -233,12 +281,18 @@
     text.offset {
       dominant-baseline: auto;
     }
+    rect.outline {
+        fill: none;
+        stroke: #fff;
+        stroke-width: ${outlineSize}px;
   </style>
   <g id="screens"></g>
+  <g id="masks"></g>
 `;
             const screensElem = q('#screens', svgElem);
+            const masksElem = q('#masks', svgElem);
 
-            screens.forEach(screen => {
+            screens.forEach((screen, i) => {
                 const screenElem = document.createElementNS(svgNS, 'g');
 
                 ['w', 'h', 'x', 'y', 'name'].forEach(prop => {
@@ -264,7 +318,7 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
                         rectElem.setAttributeNS(null, 'y', y);
                         rectElem.setAttributeNS(null, 'width', panelWidth);
                         rectElem.setAttributeNS(null, 'height', panelHeight);
-                        rectElem.setAttributeNS(null, 'fill', colors[(Math.round((screen.x + x) / panelHeight) + Math.round((screen.y + y) / panelWidth)) % colors.length]);
+                        rectElem.setAttributeNS(null, 'fill', colors[(Math.round(x / panelWidth) + Math.round(y / panelHeight)) % colors.length]);
                         screenElem.appendChild(rectElem);
 
                         const textElem = document.createElementNS(svgNS, 'text');
@@ -275,11 +329,20 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
                     }
                 }
 
+                const outlineElem = document.createElementNS(svgNS, 'rect');
+                outlineElem.setAttributeNS(null, 'x', screen.x + outlineSize / 2);
+                outlineElem.setAttributeNS(null, 'y', screen.y + outlineSize / 2);
+                outlineElem.setAttributeNS(null, 'width', screen.w - outlineSize);
+                outlineElem.setAttributeNS(null, 'height', screen.h - outlineSize);
+                outlineElem.classList.add('outline');
+                screenElem.appendChild(outlineElem);
+
                 const nameTextElem = document.createElementNS(svgNS, 'text');
                 nameTextElem.setAttributeNS(null, 'x', screen.x + screen.w / 2);
                 nameTextElem.setAttributeNS(null, 'y', screen.y + screen.h / 2);
                 nameTextElem.textContent = screen.name;
                 nameTextElem.classList.add('name');
+                nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, screen.w * 0.75);
                 screenElem.appendChild(nameTextElem);
 
                 const resTextElem = document.createElementNS(svgNS, 'text');
@@ -287,14 +350,80 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
                 resTextElem.setAttributeNS(null, 'y', screen.y + screen.h - textOffsetY);
                 resTextElem.textContent = `${screen.w}x${screen.h}`;
                 resTextElem.classList.add('res');
-                screenElem.appendChild(resTextElem);
 
                 const offsetTextElem = document.createElementNS(svgNS, 'text');
                 offsetTextElem.setAttributeNS(null, 'x', screen.x + textOffsetX);
                 offsetTextElem.setAttributeNS(null, 'y', screen.y + screen.h - fontSize * 1.5 - textOffsetY);
                 offsetTextElem.textContent = `(${screen.x},${screen.y})`;
                 offsetTextElem.classList.add('offset');
+
+                const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, screen.w * 0.9), restrictedTextWidth(offsetTextElem, screen.w * 0.9))}px`;
+                resTextElem.style.fontSize = resOffsetFontSize;
+                offsetTextElem.style.fontSize = resOffsetFontSize;
+                screenElem.appendChild(resTextElem);
                 screenElem.appendChild(offsetTextElem);
+
+                if(showMask && i > 0) {
+                    if (!allSameWidthAndX && !allSameHeightAndY) {
+                        throw 'Could not calculate mask. For automatic calculation of mask, all screens needs to have the same coordinates and sizes in at least one axis';
+                    }
+
+                    const maskElem = document.createElementNS(svgNS, 'g');
+
+                    const prevScreen = screens[i - 1];
+
+                    let maskX, maskY, maskW, maskH;
+
+                    if(allSameHeightAndY) {
+                        maskX = prevScreen.x + prevScreen.w;
+                        maskY = screen.y;
+                        maskW = screen.x - maskX;
+                        maskH = screen.h;
+                    } else { // allSameWidth
+                        maskX = screen.x;
+                        maskY = prevScreen.y + prevScreen.h;
+                        maskW = screen.w;
+                        maskH = screen.y - maskY;
+                    }
+
+                    if(maskW !== 0 && maskH !== 0) {
+                        const rectElem = document.createElementNS(svgNS, 'rect');
+                        rectElem.setAttributeNS(null, 'x', maskX);
+                        rectElem.setAttributeNS(null, 'y', maskY);
+                        rectElem.setAttributeNS(null, 'width', maskW);
+                        rectElem.setAttributeNS(null, 'height', maskH);
+                        rectElem.setAttributeNS(null, 'fill', '#000');
+                        maskElem.appendChild(rectElem);
+
+                        const nameTextElem = document.createElementNS(svgNS, 'text');
+                        nameTextElem.setAttributeNS(null, 'x', maskX + maskW / 2);
+                        nameTextElem.setAttributeNS(null, 'y', maskY + maskH / 2);
+                        nameTextElem.textContent = '[Mask]';
+                        nameTextElem.classList.add('name');
+                        nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, maskW * 0.75);
+                        maskElem.appendChild(nameTextElem);
+
+                        const resTextElem = document.createElementNS(svgNS, 'text');
+                        resTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
+                        resTextElem.setAttributeNS(null, 'y', maskY + maskH - textOffsetY);
+                        resTextElem.textContent = `${maskW}x${maskH}`;
+                        resTextElem.classList.add('res');
+
+                        const offsetTextElem = document.createElementNS(svgNS, 'text');
+                        offsetTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
+                        offsetTextElem.setAttributeNS(null, 'y', maskY + maskH - fontSize * 1.5 - textOffsetY);
+                        offsetTextElem.textContent = `(${maskX},${maskY})`;
+                        offsetTextElem.classList.add('offset');
+
+                        const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, maskW * 0.9), restrictedTextWidth(offsetTextElem, maskW * 0.9))}px`;
+                        resTextElem.style.fontSize = resOffsetFontSize;
+                        offsetTextElem.style.fontSize = resOffsetFontSize;
+                        maskElem.appendChild(resTextElem);
+                        maskElem.appendChild(offsetTextElem);
+
+                        masksElem.appendChild(maskElem);
+                    }
+                }
 
                 screensElem.appendChild(screenElem);
             });
