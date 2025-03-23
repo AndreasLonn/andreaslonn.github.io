@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<!--
+    +--------------+
+    | Screen Color |
+    +--------------+
+    https://andreaslonn.se/screencolor.html
+
+    Hello
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScreenColor</title>
+    <style>
+        body {
+            color: black;
+            --color-invalid: red;
+            font-family: monospace;
+        }
+        body.light {
+            color: white;
+        }
+        body.red {
+            --color-invalid: yellow;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            width: min-content;
+            gap: 0.5em;
+        }
+        main fieldset {
+            display: flex;
+            flex-direction: row;
+            border: currentColor solid 0.1em;
+            gap: 1em;
+        }
+        input {
+            background: none;
+            color: inherit;
+            border: none;
+            outline: none;
+            text-align: right;
+            font-family: inherit;
+            font-size: 1em;
+        }
+        input[type=range] {
+            flex-grow: 1;
+        }
+        input[type=text] {
+            text-align: left;
+            font-size: 1.3em;
+            padding: 0.8em;
+            padding-top: 0.4em;
+            margin: -0.6em;
+            margin-top: -0.3em;
+            width: 100%;
+        }
+        input:invalid {
+            color: var(--color-invalid);
+            text-decoration: underline;
+            text-decoration-thickness: 0.2em;
+        }
+
+        @media (max-width: 400px) {
+            main {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <fieldset id="inputR"><legend>Red</legend><input type="range" id="sliderR" value="255" min="0" max="255" /><input type="number" id="numberR" value="255" min="0" max="255" /></fieldset>
+        <fieldset id="inputG"><legend>Green</legend><input type="range" id="sliderG" value="255" min="0" max="255" /><input type="number" id="numberG" value="255" min="0" max="255" /></fieldset>
+        <fieldset id="inputB"><legend>Blue</legend><input type="range" id="sliderB" value="255" min="0" max="255" /><input type="number" id="numberB" value="255" min="0" max="255" /></fieldset>
+        <fieldset id="inputHEX"><legend>HEX</legend><input id="textHEX" type="text" value="#FFFFFF" maxlength="7" /></fieldset>
+    </main>
+    <script>
+        function qs(elems, parent=document) { return parent.querySelectorAll(elems); }
+
+        function contrast(rgb1, rgb2) {
+            function luminance(rgb) {
+                rgb = rgb.map((c) => {
+                    c /= 255;
+                    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+                });
+                return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+            }
+            const lum1 = luminance(rgb1);
+            const lum2 = luminance(rgb2);
+            const brightest = Math.max(lum1, lum2);
+            const darkest = Math.min(lum1, lum2);
+            return (brightest + 0.05) / (darkest + 0.05);
+        }
+
+        function redBackground(r, g, b) {
+            return contrast([r,g,b], [255,0,0]) < contrast([r,g,b], [255,255,0]);
+        }
+        function darkBackground(r, g, b) {
+            return (r * 299 + g * 587 + b * 114) <= 125000;
+        }
+
+        function setScreenColor(r, g, b, update={}) {
+            r = Math.min(255, Math.max(0, Number(r)));
+            g = Math.min(255, Math.max(0, Number(g)));
+            b = Math.min(255, Math.max(0, Number(b)));
+
+            const hex = '#'
+                + r.toString(16).padStart(2, '0')
+                + g.toString(16).padStart(2, '0')
+                + b.toString(16).padStart(2, '0');
+
+            sliderR.value = r;
+            numberR.value = r;
+            sliderG.value = g;
+            numberG.value = g;
+            sliderB.value = b;
+            numberB.value = b;
+
+            const allLower = /^(?=.*[a-f])[#0-9a-f]+$/.test(textHEX.value);
+            const hexCase = allLower ? hex.toLowerCase() : hex.toUpperCase();
+
+            if(update.text !== false) {
+                textHEX.value = hexCase;
+                textHEX.setCustomValidity('');
+            }
+
+            if(update.history !== false) window.history.replaceState(null, null, hexCase);
+
+            document.documentElement.style.backgroundColor = hex;
+            document.body.classList.toggle('light', darkBackground(r, g, b));
+            document.body.classList.toggle('red', redBackground(r, g, b));
+        }
+
+        function parseHex(hex) {
+            let value = hex.toUpperCase();
+            if(value.startsWith('#')) value = value.substring(1);
+            if(value.length === 3) value = value[0] + value[0] + value[1] + value[1] + value[2] + value[2];
+            if(!/^[0-9A-F]{6}$/.test(value)) {
+                throw 'Invalid HEX';
+            }
+
+            return [
+                parseInt(value.substring(0, 2), 16),
+                parseInt(value.substring(2, 4), 16),
+                parseInt(value.substring(4, 6), 16),
+            ];
+        }
+
+        qs('input').forEach(e => e.addEventListener('input', event => {
+            switch(event.target.type) {
+                case 'range': setScreenColor(sliderR.value, sliderG.value, sliderB.value); break;
+                case 'number': setScreenColor(numberR.value, numberG.value, numberB.value); break;
+                case 'text':
+                    try {
+                        const rgb = parseHex(event.target.value);
+                        event.target.setCustomValidity('');
+                        setScreenColor(...rgb, {text: false});
+                    } catch(error) {
+                        event.target.setCustomValidity(error);
+                    }
+                    break;
+            }
+        }));
+
+        if(window.location.hash) setScreenColor(...parseHex(window.location.hash), {history: false});
+    </script>
+</body>
+</html>
