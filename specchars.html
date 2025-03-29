@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Characters</title>
+    <style>
+        @import url(toolstyle.css) layer(toolstyle);
+
+        body {
+            margin: 0;
+        }
+        main {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        h1 {
+            text-align: center;
+            margin: 0;
+            padding: 1em 0 2em 0;
+        }
+        #chars {
+            display: grid;
+            --columns: 5;
+            grid-template-columns: repeat(var(--columns), 1fr);
+            gap: 1em;
+        }
+        #chars > label {
+            box-sizing: border-box;
+            cursor: pointer;
+            border: 0.15em solid var(--on-background-color);
+            border-radius: 0.5em;
+            padding: 1em;
+            aspect-ratio: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+            user-select: none;
+        }
+        @media (max-width: 700px) { #chars { --columns: 4; } }
+        @media (max-width: 550px) { #chars { --columns: 3; } }
+        @media (max-width: 450px) { #chars { --columns: 2; } #chars > label { aspect-ratio: 2/1 ;} }
+        @media (max-width: 310px) { #chars { --columns: 1; } }
+        #chars > label:hover {
+            background-color: var(--on-background-color);
+            color: var(--background-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #chars > label input {
+            font-size: 2em;
+            margin-bottom: 0.25em;
+            text-align: center;
+            background: none;
+            border: none;
+            width: inherit;
+            color: inherit;
+            outline: none;
+        }
+        #chars > label span {
+            font-size: 0.9em;
+            text-align: center;
+            word-break: break-word;
+        }
+        #toast {
+            position: fixed;
+            bottom: 1em;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--on-background-color);
+            color: var(--background-color);
+            padding: 0.5em 1em;
+            border-radius: 0.25em;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        #toast.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Special Characters</h1>
+
+        <section id="chars">
+            <label>
+                <input type="text" readonly value="&nbsp;">
+                <span>Non-breaking Space</span>
+            </label>
+            <label>
+                <input type="text" readonly value="&zwj;">
+                <span>Zero-width Joiner</span>
+            </label>
+            <label>
+                <input type="text" readonly value="&ZeroWidthSpace;">
+                <span>Zero-width Space</span>
+            </label>
+            <label>
+                <input type="text" readonly value="&shy;">
+                <span>Soft Hyphen</span>
+            </label>
+            <label>
+                <input type="text" readonly value="&#x2800;">
+                <span>Braille Blank</span>
+            </label>
+            <label>
+                <input type="text" readonly value="&#x202D;">
+                <span>Left-to-right Override</span>
+            </label>
+            <label>
+                <input type="text" readonly value="&#x202E;">
+                <span>Right-to-left Override</span>
+            </label>
+            <label>
+                <input type="text" readonly value="✓">
+                <span>Check Mark</span>
+            </label>
+            <label>
+                <input type="text" readonly value="∞">
+                <span>Infinity</span>
+            </label>
+            <label>
+                <input type="text" readonly value="&#xFFFD;">
+                <span>Replace&shy;ment Character</span>
+            </label>
+        </section>
+
+        <div id="toast"></div>
+    </main>
+
+    <script>
+        function q(elem, parent=document) { return parent.querySelector(elem); }
+        function qs(elems, parent=document) { return parent.querySelectorAll(elems); }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.classList.add('visible');
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 1500);
+        }
+
+        qs('#chars > label').forEach(label => {
+            label.addEventListener('click', async () => {
+                const charInput = q('input', label);
+                const charLabel = q('span', label);
+
+                try {
+                    await navigator.clipboard.writeText(charInput.value);
+                } catch(exception) {
+                    charInput.focus();
+                    charInput.select();
+                    if(!document.execCommand('copy'))
+                        return;
+                }
+                showToast(`Copied: ${charLabel.textContent}`);
+            });
+        });
+    </script>
+</body>
+</html>
