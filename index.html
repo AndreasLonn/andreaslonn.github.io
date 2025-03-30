@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="color-scheme: light dark;">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,18 +55,24 @@
             display: block;
             box-sizing: border-box;
             background-color: var(--accent-color-surface);
-            border: 0.1em solid var(--on-accent-color-surface);
+            border: 0 solid var(--on-accent-color-surface);
             border-radius: 0.3em;
             text-align: center;
             text-decoration: none;
             overflow: hidden;
             color: var(--on-accent-color-surface-not-visited);
+            transition: border 0.1s;
 
             display: flex;
             flex-direction: column;
         }
         ul > li > a:visited {
             color: var(--on-accent-color-surface-visited);
+        }
+        @media (prefers-color-scheme: dark) {
+            ul > li > a {
+                border-width: 0.1em;
+            }
         }
 
         ul > li > a span {
