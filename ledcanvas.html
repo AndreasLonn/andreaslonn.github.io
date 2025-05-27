@@ -89,14 +89,17 @@
     <noscript>
         <h2>This tool does not work without JavaScript. Please enable it.</h2>
     </noscript>
+
     <main>
         <h1>LED Canvas Generator</h1>
+
         <div id="warning">
             <span></span>
             <button>Close</button>
         </div>
+
         <form id="params">
-            <label>JSON
+            <label>Screens (JSON)
                 <textarea id="input-json">[
   { "w": 384, "h": 1152, "x": 0, "y": 0, "name": "ll" },
   { "w": 384, "h": 1152, "x": 768, "y": 0, "name": "lr" },
@@ -106,17 +109,48 @@
 ]</textarea>
             </label>
 
-            <label>Panel Width
-                <input type="number" min="0" value="192" id="panel-width">
-            </label>
-            <label>Panel Height
-                <input type="number" min="0" value="192" id="panel-height">
-            </label>
+            <fieldset>
+                <legend>LED Panels</legend>
+                <label>Width
+                    <input type="number" min="0" value="192" id="panel-width">
+                </label>
+                <label>Height
+                    <input type="number" min="0" value="192" id="panel-height">
+                </label>
+            </fieldset>
+
+            <fieldset>
+                <legend>Label</legend>
+                <label>
+                    <input type="checkbox" id="label-show" checked>
+                    Show a label
+                </label>
+                <label>Label
+                    <input type="text" value="LED Canvas" id="label-text">
+                </label>
+                <label>
+                    <input type="checkbox" id="label-show-res" checked>
+                    Show resolution
+                </label>
+                <label>Center X
+                    <input type="number" min="0" value="2592" max="5184" id="label-cx">
+                </label>
+                <label>Center Y
+                    <input type="number" min="0" value="208" max="1152" id="label-cy">
+                </label>
+                <label>Text Size
+                    <input type="number" min="1" value="80" max="1152" id="label-size">
+                </label>
+            </fieldset>
 
             <div>
                 <input type="checkbox" id="show-mask">
                 <label for="show-mask" >Automatically calculated mask</label>
             </div>
+
+            <label>Link
+                <a id="output-link">Link to current settings</a>
+            </label>
 
             <label>
                 <span>
@@ -130,26 +164,23 @@
                 </datalist>
             </label>
 
-            <label>Link
-                <a id="output-link">Link to current settings</a>
-            </label>
-
             <button type="submit">Generate</button>
         </form>
 
         <label>
-            Preview (SVG)
+            Preview (SVG) <span class="total-resolution-text"></span>
             <svg id="svg-preview"></svg>
         </label>
 
         <label>
-            Result
+            Result (<span class="total-resolution-text"></span>)
             <img id="img-preview">
         </label>
     </main>
 
     <script type="module">
         function q(elem, parent=document) { return parent.querySelector(elem); }
+        function qs(elems, parent=document) { return parent.querySelectorAll(elems); }
 
         const svgElem = q('#svg-preview');
         const svgNS = "http://www.w3.org/2000/svg";
@@ -175,10 +206,21 @@
             if(search.has('data')) {
                 try {
                     const data = JSON.parse(atob(search.get('data').replace(/_/g, '/').replace(/-/g, '+')));
-                    if(data.hasOwnProperty('input-json')) q('#input-json', formElem).value = data['input-json'];
-                    if(data.hasOwnProperty('panel-width')) q('#panel-width', formElem).value = data['panel-width'];
-                    if(data.hasOwnProperty('panel-height')) q('#panel-height', formElem).value = data['panel-height'];
-                    if(data.hasOwnProperty('show-mask')) q('#show-mask', formElem).checked = data['show-mask'];
+                    Object.entries(data).forEach(([key, value]) => {
+                        const elem = document.getElementById(key);
+                        if (!formElem.contains(elem)) return;
+
+                        switch(typeof value) {
+                            case "boolean":
+                                elem.checked = value;
+                                break;
+                            case "string":
+                            case "number":
+                            case "bigint":
+                                elem.value = value;
+                                break;
+                        }
+                    });
                     window.history.replaceState(null, null, "?");
                 } catch(exception) {
                     console.error('Unable to read data from URL params:', exception);
@@ -222,12 +264,29 @@
             const panelWidth = Number(q('#panel-width', formElem).value);
             const panelHeight = Number(q('#panel-height', formElem).value);
 
+            const labelCXElem = q('#label-cx', formElem);
+            const labelCYElem = q('#label-cy', formElem);
+            const labelSizeElem = q('#label-size', formElem);
+
+            const labelShow = q('#label-show', formElem).checked;
+            const labelText = q('#label-text', formElem).value;
+            const labelShowRes = q('#label-show-res', formElem).checked;
+            const labelCX = Number(labelCXElem.value);
+            const labelCY = Number(labelCYElem.value);
+            const labelSize = Number(labelSizeElem.value);
+
             const showMask = q('#show-mask', formElem).checked;
 
             q('#output-link', formElem).href = `ledcanvas.html?data=${btoa(JSON.stringify({
                 'input-json': q('#input-json', formElem).value,
                 'panel-width': panelWidth,
                 'panel-height': panelHeight,
+                'label-show': labelShow,
+                'label-text': labelText,
+                'label-show-res': labelShowRes,
+                'label-cx': labelCX,
+                'label-cy': labelCY,
+                'label-size': labelSize,
                 'show-mask': showMask,
             }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`;
 
@@ -253,6 +312,8 @@
             svgElem.setAttributeNS(null, 'width', totalWidth);
             svgElem.setAttributeNS(null, 'height', totalHeight);
             svgElem.setAttributeNS(null, 'viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+
+            qs('.total-resolution-text').forEach(elem => elem.textContent = `${totalWidth}x${totalHeight}`);
 
             const colors = ['#a00', '#0a0', '#00a'];
             const textOffsetX = panelHeight / 30;
@@ -285,6 +346,7 @@
       dominant-baseline: middle;
       filter :url(#solid);
       padding: 10px;
+      white-space: preserve;
     }
     text.res,
     text.offset {
@@ -297,9 +359,11 @@
   </style>
   <g id="screens"></g>
   <g id="masks"></g>
+  <g id="label"></g>
 `;
             const screensElem = q('#screens', svgElem);
             const masksElem = q('#masks', svgElem);
+            const labelElem = q('#label', svgElem);
 
             screens.forEach((screen, i) => {
                 const screenElem = document.createElementNS(svgNS, 'g');
@@ -436,6 +500,23 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
 
                 screensElem.appendChild(screenElem);
             });
+
+            labelCXElem.max = totalWidth;
+            labelCYElem.max = totalHeight;
+            labelSizeElem.max = totalHeight;
+
+            if (labelShow) {
+                const labelTextElem = document.createElementNS(svgNS, 'text');
+                labelTextElem.setAttributeNS(null, 'x', labelCX);
+                labelTextElem.setAttributeNS(null, 'y', labelCY);
+                let labelTextText = labelText;
+                if(labelShowRes)
+                    labelTextText += (labelText ? '\n' : '') + `${totalWidth}x${totalHeight}`;
+                labelTextElem.textContent = labelTextText;
+                labelTextElem.classList.add('name');
+                labelTextElem.style.fontSize = `${labelSize}px`;
+                labelElem.appendChild(labelTextElem);
+            }
 
             imgElem.src = '';
         }
