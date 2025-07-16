@@ -7,31 +7,30 @@
 
     Hello
 -->
-<html lang="en" style="color-scheme: light dark;">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificate Viewer</title>
     <style>
-        main {
-            display: flex;
-            flex-direction: column;
-        }
+        @import url(toolstyle.css) layer(toolstyle);
+
         textarea#input-text {
             height: 200px;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Certificate viewer</h1>
-    </header>
-
     <main>
-        <label for="input-file">Upload file</label>
-        <input type="file" id="input-file" accept=".pem,.cert,*">
-        <label for="input-text">Input Text</label>
-        <textarea id="input-text" placeholder="-----BEGIN CERTIFICATE-----
+        <h1>Certificate viewer</h1>
+
+        <form id="cert-input">
+            <label>Upload file
+                <input type="file" id="input-file" accept=".pem,.cert,*">
+            </label>
+
+            <label>Input Text
+                <textarea id="input-text" placeholder="-----BEGIN CERTIFICATE-----
 MIIFITCCBAmgAwIBAgISBHUiLk/ZMs6F6K29WJ8p4rBYMA0GCSqGSIb3DQEBCwUA
 MDIxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQD
 EwJSMzAeFw0yMjA0MDYxNzEyMTVaFw0yMjA3MDUxNzEyMTRaMBkxFzAVBgNVBAMT
@@ -61,19 +60,24 @@ ItnnoSkFZId+EplaTUuvMJylblRpOfbOxoAwNg5EIaPiS/ZZu99P05ckxEEadLlB
 UFKtLflgvRyBBtCAJDw2rEPHzGheHJYYNjTyr7lkwxxtSd9z53Z605puKFzjVvJa
 shKhxiei/0DraueGE2DE/5K3g03V
 -----END CERTIFICATE-----"></textarea>
-        <button id="button-view-cert">Create link</button>
+            </label>
+
+            <button type="submit">Create link</button>
+        </form>
+
     </main>
 
     <script>
         function q(elem, parent=document) { return parent.querySelector(elem); }
-        function qs(elems, parent=document) { return parent.querySelectorAll(elems); }
 
         q('input[type="file"]#input-file').addEventListener('input', async event => {
             // Read file and set textarea content to file content
             q('textarea#input-text').value = await event.srcElement.files[0].text();
         });
 
-        q('button#button-view-cert').addEventListener('click', event => {
+        q('form#cert-input').addEventListener('submit', event => {
+            event.preventDefault();
+
             let certText = q('textarea#input-text').value;
 
             // If textarea is empty
@@ -91,18 +95,11 @@ shKhxiei/0DraueGE2DE/5K3g03V
             certText = certText.replace('-----BEGIN CERTIFICATE-----', '');
 
             // Create array of the supplied certificates
-            let certs = certText.split('-----BEGIN CERTIFICATE-----');
+            const certs = certText.split('-----BEGIN CERTIFICATE-----');
 
-            // Create base link
-            let certLink = 'about:certificate?';
+            const linkParams = certs.map(cert => `cert=${encodeURIComponent(cert)}`);
 
-            // Add all certificates to link
-            certs.forEach(cert => {
-                certLink += `&cert=${encodeURIComponent(cert)}`
-            });
-
-            // Remove first &
-            certLink = certLink.replace('&', '');
+            const certLink = `about:certificate?${linkParams.join('&')}`;
 
             prompt('Copy link:', certLink);
         });
