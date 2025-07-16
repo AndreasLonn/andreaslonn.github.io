@@ -15,6 +15,11 @@
     <style>
         @import url(toolstyle.css) layer(toolstyle);
 
+        h1 {
+            grid-area: h1;
+            margin-bottom: 0;
+        }
+
         form#checkerboard-params {
             grid-area: form;
         }
@@ -33,7 +38,8 @@
         }
 
         main {
-            grid-template-areas: "form svg"
+            grid-template-areas: "h1   h1"
+                                 "form svg"
                                  "form img";
             grid-template-columns: 1fr 1fr;
             display: grid;
@@ -41,9 +47,10 @@
             width: unset;
         }
 
-        @media (max-width: 400px) {
+        @media (max-width: 500px) {
             main {
-                grid-template-areas: "form"
+                grid-template-areas: "h1"
+                                     "form"
                                      "svg"
                                      "img";
                 grid-template-columns: 1fr;
@@ -57,6 +64,8 @@
         <h2>This tool does not work without JavaScript. Please enable it.</h2>
     </noscript>
     <main>
+        <h1>Checkerboard Generator</h1>
+
         <form id="checkerboard-params">
             <label>Width
                 <input type="number" min="0" value="1920" id="input-width">
@@ -66,9 +75,25 @@
                 <input type="number" min="0" value="1080" id="input-height">
             </label>
 
-            <label>Size
-                <input type="number" min="1" value="40" id="input-size">
-            </label>
+            <fieldset>
+                <legend>Size</legend>
+
+                <label>Custom
+                    <input type="number" list="divisors" min="1" value="40" id="input-size">
+                </label>
+
+                <label>Divisors
+                    <select id="size-divisors">
+                        <option value="120">120</option>
+                        <option value="60">60</option>
+                        <option value="40" selected>40</option>
+                        <option value="30">30</option>
+                        <option value="24">24</option>
+                        <option value="20">20</option>
+                        <option value="15">15</option>
+                    </select>
+                </label>
+            </fieldset>
 
             <details open>
                 <summary>
@@ -146,6 +171,32 @@
 
         const formElem = q('form#checkerboard-params');
 
+        const maxValidSquares = 150;
+
+        function primeFactors(n) {
+            const factors = [];
+
+            for(let divisor = 2; n >= 2;) {
+                if (n % divisor === 0) {
+                    factors.push(divisor);
+                    n = n / divisor;
+                } else divisor++;
+            }
+
+            return factors;
+        }
+
+        function commonElems(a, b) {
+            const commonElems = [];
+            const tempList = b;
+            a.forEach(elem => {
+                if(tempList.indexOf(elem) < 0) return;
+                tempList.splice(tempList.indexOf(elem), 1);
+                commonElems.push(elem);
+            });
+            return commonElems;
+        }
+
         function updateCheckerboard() {
             const elems = [];
 
@@ -156,7 +207,7 @@
             const colorOdd = q('#input-color-odd', formElem).value;
             const colorEven = q('#input-color-even', formElem).value;
 
-            const valid = Math.max(width / size, height / size) < 150;
+            const valid = Math.max(width / size, height / size) < maxValidSquares;
             q('#input-size').classList.toggle('invalid', !valid);
             if(!valid) return;
 
@@ -165,8 +216,8 @@
 
             for(let y = 0; y * size < height; y++)
                 for(let x = 0; x * size < width; x++) {
-                    const evenX = x % 2 == 0;
-                    const evenY = y % 2 == 0;
+                    const evenX = x % 2 === 0;
+                    const evenY = y % 2 === 0;
                     if((evenX || !evenY) && (!evenX || evenY)) continue;
 
                     const elem = document.createElementNS(svgNS, 'rect');
@@ -185,7 +236,6 @@
 
         formElem.addEventListener('input', event => {
             const target = event.target;
-            console.log(event);
 
             if(target.tagName !== 'INPUT') return;
 
@@ -193,10 +243,7 @@
 
             const targetColor = `input-color-${colorNumber}`;
 
-            console.log(targetColor);
-
             if(target.type === 'range') {
-                console.log('Range input');
                 const valR = Number(q(`#${targetColor}-r`).value);
                 const valG = Number(q(`#${targetColor}-g`).value);
                 const valB = Number(q(`#${targetColor}-b`).value);
@@ -207,8 +254,6 @@
                 q(`#${targetColor}-text`).value = hexStr;
             }
             else if(target.type === 'text' && colorNumber) {
-                console.log('Text input');
-
                 let hexStr = q(`#${targetColor}-text`).value.trim();
 
                 if(hexStr.length === 3)
@@ -218,7 +263,6 @@
 
                 const valid = /#(\d|[a-f]|[A-F]){6}/.test(hexStr);
                 q(`#${targetColor}-text`).classList.toggle('invalid', !valid);
-                console.log('valid', valid);
 
                 if(!valid) return;
 
@@ -233,7 +277,6 @@
                 q(`#${targetColor}`).value = hexStr;
             }
             else if(target.type === 'color') {
-                console.log('Color input');
                 const hexStr = q(`#${targetColor}`).value;
 
                 const valR = parseInt(hexStr.substr(1, 2), 16);
@@ -246,9 +289,61 @@
 
                 q(`#${targetColor}-text`).value = hexStr;
             }
+            else if(target.type === 'number') {
+                switch(target.id) {
+                    case 'input-size': {
+                        q('#size-divisors').value = Number(target.value);
+                        break;
+                    }
+                    case 'input-width':
+                    case 'input-height': {
+                        const width = Number(q('#input-width', formElem).value);
+                        const height = Number(q('#input-height', formElem).value);
+
+                        const wFactors = primeFactors(width);
+                        const hFactors = primeFactors(height);
+
+                        const commonFactors = commonElems(wFactors, hFactors);
+
+                        const divisors = new Set();
+
+                        const total = Math.pow(2, commonFactors.length);
+
+                        for (let i = 1; i < total; i++) {
+                            const comb = [];
+                            // https://www.geeksforgeeks.org/javascript/find-all-the-combinations-of-the-array-values-in-javascript
+                            for (let j = 0; j < commonFactors.length; j++) {
+                                if (i & (1 << j)) {
+                                    comb.push(commonFactors[j]);
+                                }
+                            }
+
+                            const divisor = comb.reduce((prev, curr) => prev * curr);
+
+                            if(Math.max(width / divisor, height / divisor) < maxValidSquares)
+                                divisors.add(divisor);
+                        }
+
+                        const sorted = [...divisors].sort((a, b) => a < b);
+
+                        q('#size-divisors').replaceChildren(...sorted.map(divisor => {
+                            const elem = document.createElement('option');
+                            elem.textContent = divisor;
+                            return elem;
+                        }));
+
+                        break;
+                    }
+                }
+            }
 
             updateCheckerboard();
         });
+
+        q('#size-divisors').addEventListener('change', event => {
+            q('#input-size').value = event.target.value;
+            updateCheckerboard();
+        })
 
         formElem.addEventListener('submit', event => {
             event.preventDefault();

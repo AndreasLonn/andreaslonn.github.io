@@ -25,13 +25,17 @@
                                  "times aside";
             grid-template-columns: 1fr 1fr;
         }
-        @media (max-width: 500px) {
+        @media (max-width: 600px) {
             main {
                 grid-template-areas: "h1"
                                      "times"
                                      "aside";
                 grid-template-columns: unset;
             }
+        }
+
+        main > * {
+           margin-bottom: 1rem;
         }
 
         h1 {
@@ -93,7 +97,6 @@
         aside > section > label {
             display: flex;
             flex-direction: column;
-            width: max-content;
         }
         aside > section > div {
             display: flex;
@@ -327,7 +330,7 @@
             const jsonStr = JSON.stringify(values);
 
             statsJson.value = jsonStr;
-            window.location.hash = jsonStr;
+            window.history.replaceState(null, null, `#${jsonStr}`);
         }
 
         function setFromData(newData) {

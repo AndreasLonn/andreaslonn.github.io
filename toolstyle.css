@@ -7,7 +7,7 @@
 
     Hello
 
-    v1.4
+    v1.5
 
 */
 
@@ -115,7 +115,7 @@ form .invalid {
 }
 form fieldset {
     gap: 0.5em;
-    border-color: currentColor;
+    border: solid 0.1em currentColor;
 }
 form div:has(input[type=checkbox] + label),
 form fieldset label:has(input[type="checkbox"]) {
