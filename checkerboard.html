@@ -37,6 +37,10 @@
             border: 1px solid var(--on-background-color);
         }
 
+        img#img-checkerboard-pattern {
+            image-rendering: pixelated;
+        }
+
         main {
             grid-template-areas: "h1   h1"
                                  "form svg"
@@ -207,7 +211,7 @@
             const colorOdd = q('#input-color-odd', formElem).value;
             const colorEven = q('#input-color-even', formElem).value;
 
-            const valid = Math.max(width / size, height / size) < maxValidSquares;
+            const valid = Math.max(width / size, height / size) <= maxValidSquares;
             q('#input-size').classList.toggle('invalid', !valid);
             if(!valid) return;
 
@@ -320,9 +324,12 @@
 
                             const divisor = comb.reduce((prev, curr) => prev * curr);
 
-                            if(Math.max(width / divisor, height / divisor) < maxValidSquares)
+                            if(Math.max(width / divisor, height / divisor) <= maxValidSquares)
                                 divisors.add(divisor);
                         }
+
+                        if(Math.max(width, height) <= maxValidSquares)
+                            divisors.add(1);
 
                         const sorted = [...divisors].sort((a, b) => a < b);
 
