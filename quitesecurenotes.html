@@ -193,9 +193,13 @@
          * Encrypt and save notes to localStorage. Also generate and save new iv and salt (modified in-place)
          */
         async function saveNotes() {
-            localStorage.setItem('quitesecurenotes-iv', toB64(crypto.getRandomValues(iv)));
-            localStorage.setItem('quitesecurenotes-salt', toB64(crypto.getRandomValues(salt)));
-            localStorage.setItem('quitesecurenotes-encrypted-data', toB64(await encryptNotes(notes.value)));
+            try {
+                localStorage.setItem('quitesecurenotes-iv', toB64(crypto.getRandomValues(iv)));
+                localStorage.setItem('quitesecurenotes-salt', toB64(crypto.getRandomValues(salt)));
+                localStorage.setItem('quitesecurenotes-encrypted-data', toB64(await encryptNotes(notes.value)));
+            } catch(e) {
+                alert(`Unable to store notes: ${e}`);
+            }
         }
 
         /**

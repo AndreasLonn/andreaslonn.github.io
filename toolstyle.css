@@ -7,7 +7,7 @@
 
     Hello
 
-    v1.5
+    v1.6
 
 */
 
@@ -100,6 +100,7 @@ main {
 
 form,
 form fieldset,
+form details,
 form label {
     display: flex;
     flex-direction: column;
@@ -107,18 +108,24 @@ form label {
 form {
     gap: 1em;
 }
-form fieldset {
+form fieldset,
+form details {
     margin: 0;
 }
 form .invalid {
     outline: red 1px solid;
 }
-form fieldset {
+form details > fieldset {
+    padding: 0.5em 0.3em;
+    padding-top: 0.9em;
+    border: none;
+}
+form fieldset,
+form details {
     gap: 0.5em;
     border: solid 0.1em currentColor;
 }
-form div:has(input[type=checkbox] + label),
-form fieldset label:has(input[type="checkbox"]) {
+form :is(fieldset,details) label:has(input:is([type="checkbox"],[type="radio"])) {
     display: flex;
     flex-direction: row;
     gap: 0.5em;

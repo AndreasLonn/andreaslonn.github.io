@@ -36,29 +36,49 @@
             grid-area: form;
         }
 
-        label:has(svg#svg-preview) {
-            grid-area: svg;
+        aside {
+            grid-area: aside;
         }
 
-        label:has(img#img-preview) {
-            grid-area: img;
-        }
-
-        main > label > :where(svg, img) {
+        main > aside :where(svg, img) {
             width: 100%;
             height: auto;
             border: 1px solid var(--on-background-color);
         }
 
-        textarea#input-json {
+        main.tall > aside :where(svg, img) {
+            width: min-content;
+            height: 80vh;
+        }
+
+        main > aside > div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        main:not(.tall) > aside > div:not(:first-child) {
+            display: flex;
+            flex-direction: column;
+            margin-top: 1em;
+        }
+
+        main.tall > aside > div:has(svg#svg-preview) {
+            float: left;
+        }
+
+        main.tall > aside > div:has(img#img-preview) {
+            float: right;
+        }
+
+
+        textarea[name="input-json"] {
             height: 15em;
         }
 
         main {
             grid-template-areas: "h1   h1"
                                  "warn warn"
-                                 "form svg"
-                                 "form img";
+                                 "form aside";
             grid-template-columns: 1fr 1fr;
             display: grid;
             gap: 1em;
@@ -77,8 +97,7 @@
                 grid-template-areas: "h1"
                                      "warn"
                                      "form"
-                                     "svg"
-                                     "img";
+                                     "aside";
                 grid-template-columns: 1fr;
             }
         }
@@ -100,7 +119,7 @@
 
         <form id="params">
             <label>Screens (JSON)
-                <textarea id="input-json">[
+                <textarea name="input-json">[
   { "w": 384, "h": 1152, "x": 0, "y": 0, "name": "ll" },
   { "w": 384, "h": 1152, "x": 768, "y": 0, "name": "lr" },
   { "w": 2112, "h": 1152, "x": 1536, "y": 0, "name": "main" },
@@ -112,45 +131,71 @@
             <fieldset>
                 <legend>LED Panels</legend>
                 <label>Width
-                    <input type="number" min="0" value="192" id="panel-width">
+                    <input type="number" min="0" value="192" name="panel-width">
                 </label>
                 <label>Height
-                    <input type="number" min="0" value="192" id="panel-height">
+                    <input type="number" min="0" value="192" name="panel-height">
                 </label>
             </fieldset>
+
+            <details>
+                <summary>Label</summary>
+                <fieldset>
+                    <label>
+                        <input type="checkbox" name="label-show" checked>
+                        Show a label
+                    </label>
+                    <label>Label
+                        <input type="text" value="LED Canvas" name="label-text">
+                    </label>
+                    <label>
+                        <input type="checkbox" name="label-show-res" checked>
+                        Show resolution
+                    </label>
+                    <label>Center X
+                        <input type="number" min="0" value="2592" max="5184" name="label-cx">
+                    </label>
+                    <label>Center Y
+                        <input type="number" min="0" value="208" max="1152" name="label-cy">
+                    </label>
+                    <label>Text Size
+                        <input type="number" min="1" value="80" max="1152" name="label-size">
+                    </label>
+                </fieldset>
+            </details>
+
+            <details>
+                <summary>Mask</summary>
+                <fieldset>
+                    <p>
+                        Only available for vertically/horizontally aligned screens of same width/height
+                    </p>
+                    <label>
+                        <input type="checkbox" name="mask-show-label" checked>
+                        Show label
+                    </label>
+                    <label>
+                        <input type="checkbox" name="mask-show-res" checked>
+                        Show resolution
+                    </label>
+                </fieldset>
+            </details>
 
             <fieldset>
-                <legend>Label</legend>
+                <legend>Show Type</legend>
                 <label>
-                    <input type="checkbox" id="label-show" checked>
-                    Show a label
-                </label>
-                <label>Label
-                    <input type="text" value="LED Canvas" id="label-text">
+                    <input type="radio" name="show-type" value="s" checked>
+                    Screens only
                 </label>
                 <label>
-                    <input type="checkbox" id="label-show-res" checked>
-                    Show resolution
+                    <input type="radio" name="show-type" value="m">
+                    Mask only
                 </label>
-                <label>Center X
-                    <input type="number" min="0" value="2592" max="5184" id="label-cx">
-                </label>
-                <label>Center Y
-                    <input type="number" min="0" value="208" max="1152" id="label-cy">
-                </label>
-                <label>Text Size
-                    <input type="number" min="1" value="80" max="1152" id="label-size">
+                <label>
+                    <input type="radio" name="show-type" value="sm">
+                    Screens and Mask
                 </label>
             </fieldset>
-
-            <div>
-                <input type="checkbox" id="show-mask">
-                <label for="show-mask" >Automatically calculated mask</label>
-            </div>
-
-            <label>Link
-                <a id="output-link">Link to current settings</a>
-            </label>
 
             <label>
                 <span>
@@ -167,15 +212,20 @@
             <button type="submit">Generate</button>
         </form>
 
-        <label>
-            Preview (SVG) <span class="total-resolution-text"></span>
-            <svg id="svg-preview"></svg>
-        </label>
-
-        <label>
-            Result (<span class="total-resolution-text"></span>)
-            <img id="img-preview">
-        </label>
+        <aside>
+            <div>
+                <span>
+                    Preview (SVG) <span class="total-resolution-text"></span>
+                </span>
+                <svg id="svg-preview"></svg>
+            </div>
+            <div>
+                <span>
+                    Result (<span class="total-resolution-text"></span>)
+                </span>
+                <img id="img-preview">
+            </div>
+        </aside>
     </main>
 
     <script type="module">
@@ -200,17 +250,31 @@
         }
         q('button', warnDialog).addEventListener('click', () => hideWarning());
 
-        (() => {
-            const search = new URLSearchParams(window.location.search);
+        const onHashChange = () => {
+            const urlHash = window.location.hash.replace('#', '');
+            const urlSearch = window.location.search.replace('?', '');
+
+            if(urlSearch) window.location.href = `?#${urlSearch}`;
+            const search = new URLSearchParams(urlHash);
 
             if(search.has('data')) {
                 try {
                     const data = JSON.parse(atob(search.get('data').replace(/_/g, '/').replace(/-/g, '+')));
                     Object.entries(data).forEach(([key, value]) => {
-                        const elem = document.getElementById(key);
+                        switch(key) {
+                            // Backwards compatibility
+                            case 'show-mask':
+                                key = 'show-type';
+                                value = value ? 'sm' : 's';
+                                break;
+                        }
+                        const elem = q(`[name="${key}"`);
                         if (!formElem.contains(elem)) return;
 
-                        switch(typeof value) {
+                        if(elem.type === 'radio') {
+                            q(`[name="${key}"][value="${value}"]`).checked = true;
+                        }
+                        else switch(typeof value) {
                             case "boolean":
                                 elem.checked = value;
                                 break;
@@ -221,13 +285,17 @@
                                 break;
                         }
                     });
-                    window.history.replaceState(null, null, "?");
                 } catch(exception) {
                     console.error('Unable to read data from URL params:', exception);
                     showWarning('Unable to decode data from URL');
                 }
+
+                if(updateCanvas) updateCanvas();
             }
-        })();
+        };
+
+        addEventListener('hashchange', onHashChange);
+        onHashChange();
 
         function calculateElemWidthAndFontSize(elem) {
             svgElem.appendChild(elem);
@@ -254,31 +322,35 @@
         function updateCanvas() {
             let screens;
 
+            const formData = new FormData(formElem);
+
             try {
-                screens = JSON.parse(q('#input-json', formElem).value);
+                screens = JSON.parse(formData.get('input-json'));
             } catch(exception) {
                 console.error('Unable to parse JSON:', exception);
                 throw 'Invalid JSON';
             }
 
-            const panelWidth = Number(q('#panel-width', formElem).value);
-            const panelHeight = Number(q('#panel-height', formElem).value);
+            const panelWidth = Number(formData.get('panel-width'));
+            const panelHeight = Number(formData.get('panel-height'));
 
-            const labelCXElem = q('#label-cx', formElem);
-            const labelCYElem = q('#label-cy', formElem);
-            const labelSizeElem = q('#label-size', formElem);
+            const labelCXElem = q('[name="label-cx"]');
+            const labelCYElem = q('[name="label-cy"]');
+            const labelSizeElem = q('[name="label-size"]');
 
-            const labelShow = q('#label-show', formElem).checked;
-            const labelText = q('#label-text', formElem).value;
-            const labelShowRes = q('#label-show-res', formElem).checked;
-            const labelCX = Number(labelCXElem.value);
-            const labelCY = Number(labelCYElem.value);
-            const labelSize = Number(labelSizeElem.value);
+            const labelShow = formData.has('label-show');
+            const labelText = formData.get('label-text');
+            const labelShowRes = formData.has('label-show-res');
+            const labelCX = Number(formData.get('label-cx'));
+            const labelCY = Number(formData.get('label-cy'));
+            const labelSize = Number(formData.get('label-size'));
 
-            const showMask = q('#show-mask', formElem).checked;
+            const showType = formData.get('show-type');
+            const maskShowLabel = formData.has('mask-show-label');
+            const maskShowRes = formData.has('mask-show-res');
 
-            q('#output-link', formElem).href = `ledcanvas.html?data=${btoa(JSON.stringify({
-                'input-json': q('#input-json', formElem).value,
+            window.history.replaceState(null, null, `#data=${btoa(JSON.stringify({
+                'input-json': formData.get('input-json'),
                 'panel-width': panelWidth,
                 'panel-height': panelHeight,
                 'label-show': labelShow,
@@ -287,8 +359,10 @@
                 'label-cx': labelCX,
                 'label-cy': labelCY,
                 'label-size': labelSize,
-                'show-mask': showMask,
-            }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`;
+                'show-type': showType,
+                'mask-show-label': maskShowLabel,
+                'mask-show-res': maskShowRes,
+            }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`);
 
             let totalWidth = 0;
             let totalHeight = 0;
@@ -313,6 +387,8 @@
             svgElem.setAttributeNS(null, 'height', totalHeight);
             svgElem.setAttributeNS(null, 'viewBox', `0 0 ${totalWidth} ${totalHeight}`);
 
+            q('main').classList.toggle('tall', totalHeight > totalWidth);
+
             qs('.total-resolution-text').forEach(elem => elem.textContent = `${totalWidth}x${totalHeight}`);
 
             const colors = ['#a00', '#0a0', '#00a'];
@@ -333,6 +409,7 @@
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+    <mask id="mask-def"></mask>
   </defs>
   <style>
     text {
@@ -356,6 +433,10 @@
         fill: none;
         stroke: #fff;
         stroke-width: ${outlineSize}px;
+    }
+    svg > g:not(.show) {
+        display: none;
+    }
   </style>
   <g id="screens"></g>
   <g id="masks"></g>
@@ -364,6 +445,11 @@
             const screensElem = q('#screens', svgElem);
             const masksElem = q('#masks', svgElem);
             const labelElem = q('#label', svgElem);
+            const maskDefElem = q('#mask-def', svgElem);
+
+            screensElem.classList.toggle('show', showType.indexOf('s') >= 0);
+            masksElem.classList.toggle('show', showType.indexOf('m') >= 0);
+            labelElem.classList.toggle('show', showType.indexOf('s') >= 0);
 
             screens.forEach((screen, i) => {
                 const screenElem = document.createElementNS(svgNS, 'g');
@@ -436,65 +522,98 @@ screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHei
                 screenElem.appendChild(resTextElem);
                 screenElem.appendChild(offsetTextElem);
 
-                if(showMask && i > 0) {
-                    if (!allSameWidthAndX && !allSameHeightAndY) {
-                        throw 'Could not calculate mask. For automatic calculation of mask, all screens needs to have the same coordinates and sizes in at least one axis';
+                if(masksElem.classList.contains('show')) {
+                    if (allSameWidthAndX || allSameHeightAndY) {
+                        if(i > 0) {
+
+                            const maskElem = document.createElementNS(svgNS, 'g');
+
+                            const prevScreen = screens[i - 1];
+
+                            let maskX, maskY, maskW, maskH;
+
+                            if(allSameHeightAndY) {
+                                maskX = prevScreen.x + prevScreen.w;
+                                maskY = screen.y;
+                                maskW = screen.x - maskX;
+                                maskH = screen.h;
+                            } else { // allSameWidth
+                                maskX = screen.x;
+                                maskY = prevScreen.y + prevScreen.h;
+                                maskW = screen.w;
+                                maskH = screen.y - maskY;
+                            }
+
+                            if(maskW !== 0 && maskH !== 0) {
+                                const rectElem = document.createElementNS(svgNS, 'rect');
+                                rectElem.setAttributeNS(null, 'x', maskX);
+                                rectElem.setAttributeNS(null, 'y', maskY);
+                                rectElem.setAttributeNS(null, 'width', maskW);
+                                rectElem.setAttributeNS(null, 'height', maskH);
+                                rectElem.setAttributeNS(null, 'fill', '#000');
+                                maskElem.appendChild(rectElem);
+
+                                if(maskShowLabel) {
+                                    const nameTextElem = document.createElementNS(svgNS, 'text');
+                                    nameTextElem.setAttributeNS(null, 'x', maskX + maskW / 2);
+                                    nameTextElem.setAttributeNS(null, 'y', maskY + maskH / 2);
+                                    nameTextElem.textContent = '[Mask]';
+                                    nameTextElem.classList.add('name');
+                                    nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, maskW * 0.75);
+                                    maskElem.appendChild(nameTextElem);
+                                }
+
+                                if(maskShowRes) {
+                                    const resTextElem = document.createElementNS(svgNS, 'text');
+                                    resTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
+                                    resTextElem.setAttributeNS(null, 'y', maskY + maskH - textOffsetY);
+                                    resTextElem.textContent = `${maskW}x${maskH}`;
+                                    resTextElem.classList.add('res');
+
+                                    const offsetTextElem = document.createElementNS(svgNS, 'text');
+                                    offsetTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
+                                    offsetTextElem.setAttributeNS(null, 'y', maskY + maskH - fontSize * 1.5 - textOffsetY);
+                                    offsetTextElem.textContent = `(${maskX},${maskY})`;
+                                    offsetTextElem.classList.add('offset');
+
+                                    const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, maskW * 0.9), restrictedTextWidth(offsetTextElem, maskW * 0.9))}px`;
+                                    resTextElem.style.fontSize = resOffsetFontSize;
+                                    offsetTextElem.style.fontSize = resOffsetFontSize;
+                                    maskElem.appendChild(resTextElem);
+                                    maskElem.appendChild(offsetTextElem);
+                                }
+
+                                masksElem.appendChild(maskElem);
+                            }
+                        }
                     }
+                    else {
+                        if(i === 0) {
+                            const maskElem = document.createElementNS(svgNS, 'rect');
+                            maskElem.setAttributeNS(null, 'x', 0);
+                            maskElem.setAttributeNS(null, 'y', 0);
+                            maskElem.setAttributeNS(null, 'width', totalWidth);
+                            maskElem.setAttributeNS(null, 'height', totalHeight);
+                            maskElem.classList.add('mask');
+                            maskElem.setAttribute('mask', 'url(#mask-def)');
+                            masksElem.appendChild(maskElem);
 
-                    const maskElem = document.createElementNS(svgNS, 'g');
+                            const maskBackgroundElem = document.createElementNS(svgNS, 'rect');
+                            maskBackgroundElem.setAttributeNS(null, 'x', 0);
+                            maskBackgroundElem.setAttributeNS(null, 'y', 0);
+                            maskBackgroundElem.setAttributeNS(null, 'width', totalWidth);
+                            maskBackgroundElem.setAttributeNS(null, 'height', totalHeight);
+                            maskBackgroundElem.style.fill = 'white';
+                            maskDefElem.appendChild(maskBackgroundElem);
+                        }
 
-                    const prevScreen = screens[i - 1];
-
-                    let maskX, maskY, maskW, maskH;
-
-                    if(allSameHeightAndY) {
-                        maskX = prevScreen.x + prevScreen.w;
-                        maskY = screen.y;
-                        maskW = screen.x - maskX;
-                        maskH = screen.h;
-                    } else { // allSameWidth
-                        maskX = screen.x;
-                        maskY = prevScreen.y + prevScreen.h;
-                        maskW = screen.w;
-                        maskH = screen.y - maskY;
-                    }
-
-                    if(maskW !== 0 && maskH !== 0) {
-                        const rectElem = document.createElementNS(svgNS, 'rect');
-                        rectElem.setAttributeNS(null, 'x', maskX);
-                        rectElem.setAttributeNS(null, 'y', maskY);
-                        rectElem.setAttributeNS(null, 'width', maskW);
-                        rectElem.setAttributeNS(null, 'height', maskH);
-                        rectElem.setAttributeNS(null, 'fill', '#000');
-                        maskElem.appendChild(rectElem);
-
-                        const nameTextElem = document.createElementNS(svgNS, 'text');
-                        nameTextElem.setAttributeNS(null, 'x', maskX + maskW / 2);
-                        nameTextElem.setAttributeNS(null, 'y', maskY + maskH / 2);
-                        nameTextElem.textContent = '[Mask]';
-                        nameTextElem.classList.add('name');
-                        nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, maskW * 0.75);
-                        maskElem.appendChild(nameTextElem);
-
-                        const resTextElem = document.createElementNS(svgNS, 'text');
-                        resTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
-                        resTextElem.setAttributeNS(null, 'y', maskY + maskH - textOffsetY);
-                        resTextElem.textContent = `${maskW}x${maskH}`;
-                        resTextElem.classList.add('res');
-
-                        const offsetTextElem = document.createElementNS(svgNS, 'text');
-                        offsetTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
-                        offsetTextElem.setAttributeNS(null, 'y', maskY + maskH - fontSize * 1.5 - textOffsetY);
-                        offsetTextElem.textContent = `(${maskX},${maskY})`;
-                        offsetTextElem.classList.add('offset');
-
-                        const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, maskW * 0.9), restrictedTextWidth(offsetTextElem, maskW * 0.9))}px`;
-                        resTextElem.style.fontSize = resOffsetFontSize;
-                        offsetTextElem.style.fontSize = resOffsetFontSize;
-                        maskElem.appendChild(resTextElem);
-                        maskElem.appendChild(offsetTextElem);
-
-                        masksElem.appendChild(maskElem);
+                        const maskScreenElem = document.createElementNS(svgNS, 'rect');
+                        maskScreenElem.setAttributeNS(null, 'x', screen.x);
+                        maskScreenElem.setAttributeNS(null, 'y', screen.y);
+                        maskScreenElem.setAttributeNS(null, 'width', screen.w);
+                        maskScreenElem.setAttributeNS(null, 'height', screen.h);
+                        maskScreenElem.style.fill = 'black';
+                        maskDefElem.appendChild(maskScreenElem);
                     }
                 }
 
