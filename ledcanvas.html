@@ -119,7 +119,7 @@
             <button>Close</button>
         </div>
 
-        <form id="params">
+        <form id="params" novalidate>
             <label>Screens (JSON)
                 <textarea name="input-json">[
   { "w": 384, "h": 1152, "x": 0, "y": 0, "name": "ll" },
@@ -203,17 +203,28 @@
                 </label>
             </fieldset>
 
-            <label>
-                <span>
-                    Datatype (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types">MIME type</a>)
-                </span>
-                <input type="text" value="image/png" list="image-datatypes" id="input-datatype" />
-                <datalist id="image-datatypes">
-                    <option>image/png</option>
-                    <option>image/jpeg</option>
-                    <option>image/webp</option>
-                </datalist>
-            </label>
+            <details>
+                <summary>Advanced</summary>
+                <fieldset>
+                    <label>Override total width
+                        <input type="number" min="0" value="" name="override-total-width" placeholder="Unset">
+                    </label>
+                    <label>Override total height
+                        <input type="number" min="0" value="" name="override-total-height" placeholder="Unset">
+                    </label>
+                    <label>
+                        <span>
+                            Datatype (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types">MIME type</a>)
+                        </span>
+                        <input type="text" value="image/png" list="image-datatypes" id="input-datatype" />
+                        <datalist id="image-datatypes">
+                            <option>image/png</option>
+                            <option>image/jpeg</option>
+                            <option>image/webp</option>
+                        </datalist>
+                    </label>
+                </fieldset>
+            </details>
 
             <button type="submit">Generate</button>
         </form>
@@ -303,6 +314,14 @@
         addEventListener('hashchange', onHashChange);
         onHashChange();
 
+        function Integer(data) {
+            const num = Number(data);
+            if(num % 1 !== 0) {
+                throw 'Not whole number';
+            }
+            return num;
+        }
+
         function calculateElemWidthAndFontSize(elem) {
             svgElem.appendChild(elem);
             const width = elem.getBBox().width;
@@ -339,8 +358,8 @@
                     throw 'Invalid JSON';
                 }
 
-                const panelWidth = Number(formData.get('panel-width'));
-                const panelHeight = Number(formData.get('panel-height'));
+                const panelWidth = Integer(formData.get('panel-width'));
+                const panelHeight = Integer(formData.get('panel-height'));
 
                 const labelCXElem = q('[name="label-cx"]');
                 const labelCYElem = q('[name="label-cy"]');
@@ -357,6 +376,9 @@
                 const maskShowLabel = formData.has('mask-show-label');
                 const maskShowRes = formData.has('mask-show-res');
 
+                const overrideTotalWidth = Integer(formData.get('override-total-width'));
+                const overrideTotalHeight = Integer(formData.get('override-total-height'));
+
                 window.history.replaceState(null, null, `#data=${btoa(JSON.stringify({
                     'input-json': formData.get('input-json'),
                     'panel-width': panelWidth,
@@ -370,12 +392,14 @@
                     'show-type': showType,
                     'mask-show-label': maskShowLabel,
                     'mask-show-res': maskShowRes,
+                    'override-total-width': overrideTotalWidth,
+                    'override-total-height': overrideTotalHeight,
                 }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`);
 
                 let totalWidth = 0;
                 let totalHeight = 0;
-                let allSameHeightAndY = true;
                 let allSameWidthAndX = true;
+                let allSameHeightAndY = true;
 
                 screens.forEach(screen => {
                     if (screen.x + screen.w > totalWidth) {
@@ -384,8 +408,18 @@
                     if (screen.y + screen.h > totalHeight) {
                         totalHeight = screen.y + screen.h;
                     }
-                    allSameWidthAndX &&= screen.w === totalWidth;
-                    allSameHeightAndY &&= screen.h === totalHeight;
+                });
+
+                if(overrideTotalWidth) {
+                    totalWidth = overrideTotalWidth;
+                }
+                if(overrideTotalHeight) {
+                    totalHeight = overrideTotalHeight;
+                }
+
+                screens.forEach(screen => {
+                    allSameWidthAndX &&= screen.w === totalWidth && screen.x === 0;
+                    allSameHeightAndY &&= screen.h === totalHeight && screen.y === 0;
                 });
 
                 if(labelShow && (labelCX < 0 || labelCX > totalWidth)) {
@@ -673,7 +707,7 @@
         formElem.addEventListener('submit', event => {
             event.preventDefault();
 
-            const svgBox = svgElem.getBBox();
+            const svgBox = svgElem.viewBox.baseVal;
             const width = svgBox.width;
             const height = svgBox.height;
             const datatype = q('#input-datatype', formElem).value;

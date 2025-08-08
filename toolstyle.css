@@ -7,7 +7,7 @@
 
     Hello
 
-    v1.6
+    v1.7
 
 */
 
@@ -119,6 +119,9 @@ form details > fieldset {
     padding: 0.5em 0.3em;
     padding-top: 0.9em;
     border: none;
+}
+form details > fieldset:has(label:first-child > span:first-child) {
+    padding-top: 0.5em;
 }
 form fieldset,
 form details {
