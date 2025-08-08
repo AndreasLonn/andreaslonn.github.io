@@ -23,6 +23,8 @@
         #warning {
             grid-area: warn;
             display: none;
+            position: sticky;
+            top: 0;
             background-color: var(--background-color-warning);
             color: var(--on-background-color-warning);
             border: 0.1em solid var(--on-background-color-warning);
@@ -153,13 +155,13 @@
                         Show resolution
                     </label>
                     <label>Center X
-                        <input type="number" min="0" value="2592" max="5184" name="label-cx">
+                        <input type="number" min="0" value="2592" name="label-cx">
                     </label>
                     <label>Center Y
-                        <input type="number" min="0" value="208" max="1152" name="label-cy">
+                        <input type="number" min="0" value="208" name="label-cy">
                     </label>
                     <label>Text Size
-                        <input type="number" min="1" value="80" max="1152" name="label-size">
+                        <input type="number" min="1" value="80" name="label-size">
                     </label>
                 </fieldset>
             </details>
@@ -194,6 +196,10 @@
                 <label>
                     <input type="radio" name="show-type" value="sm">
                     Screens and Mask
+                </label>
+                <label>
+                    <input type="radio" name="show-type" value="m-i">
+                    Inverted Mask
                 </label>
             </fieldset>
 
@@ -320,88 +326,97 @@
         }
 
         function updateCanvas() {
-            let screens;
-
-            const formData = new FormData(formElem);
 
             try {
-                screens = JSON.parse(formData.get('input-json'));
-            } catch(exception) {
-                console.error('Unable to parse JSON:', exception);
-                throw 'Invalid JSON';
-            }
+                let screens;
 
-            const panelWidth = Number(formData.get('panel-width'));
-            const panelHeight = Number(formData.get('panel-height'));
+                const formData = new FormData(formElem);
 
-            const labelCXElem = q('[name="label-cx"]');
-            const labelCYElem = q('[name="label-cy"]');
-            const labelSizeElem = q('[name="label-size"]');
-
-            const labelShow = formData.has('label-show');
-            const labelText = formData.get('label-text');
-            const labelShowRes = formData.has('label-show-res');
-            const labelCX = Number(formData.get('label-cx'));
-            const labelCY = Number(formData.get('label-cy'));
-            const labelSize = Number(formData.get('label-size'));
-
-            const showType = formData.get('show-type');
-            const maskShowLabel = formData.has('mask-show-label');
-            const maskShowRes = formData.has('mask-show-res');
-
-            window.history.replaceState(null, null, `#data=${btoa(JSON.stringify({
-                'input-json': formData.get('input-json'),
-                'panel-width': panelWidth,
-                'panel-height': panelHeight,
-                'label-show': labelShow,
-                'label-text': labelText,
-                'label-show-res': labelShowRes,
-                'label-cx': labelCX,
-                'label-cy': labelCY,
-                'label-size': labelSize,
-                'show-type': showType,
-                'mask-show-label': maskShowLabel,
-                'mask-show-res': maskShowRes,
-            }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`);
-
-            let totalWidth = 0;
-            let totalHeight = 0;
-            let allSameHeightAndY = true;
-            let allSameWidthAndX = true;
-
-            screens.forEach(screen => {
-                if (screen.x + screen.w > totalWidth) {
-                    totalWidth = screen.x + screen.w;
+                try {
+                    screens = JSON.parse(formData.get('input-json'));
+                } catch(exception) {
+                    console.error('Unable to parse JSON:', exception);
+                    throw 'Invalid JSON';
                 }
-                if (screen.y + screen.h > totalHeight) {
-                    totalHeight = screen.y + screen.h;
+
+                const panelWidth = Number(formData.get('panel-width'));
+                const panelHeight = Number(formData.get('panel-height'));
+
+                const labelCXElem = q('[name="label-cx"]');
+                const labelCYElem = q('[name="label-cy"]');
+                const labelSizeElem = q('[name="label-size"]');
+
+                const labelShow = formData.has('label-show');
+                const labelText = formData.get('label-text');
+                const labelShowRes = formData.has('label-show-res');
+                const labelCX = Number(formData.get('label-cx'));
+                const labelCY = Number(formData.get('label-cy'));
+                const labelSize = Number(formData.get('label-size'));
+
+                const showType = formData.get('show-type');
+                const maskShowLabel = formData.has('mask-show-label');
+                const maskShowRes = formData.has('mask-show-res');
+
+                window.history.replaceState(null, null, `#data=${btoa(JSON.stringify({
+                    'input-json': formData.get('input-json'),
+                    'panel-width': panelWidth,
+                    'panel-height': panelHeight,
+                    'label-show': labelShow,
+                    'label-text': labelText,
+                    'label-show-res': labelShowRes,
+                    'label-cx': labelCX,
+                    'label-cy': labelCY,
+                    'label-size': labelSize,
+                    'show-type': showType,
+                    'mask-show-label': maskShowLabel,
+                    'mask-show-res': maskShowRes,
+                }).replace(/\//g, '_').replace(/\+/g, '-').replace(/[\u007F-\uFFFF]/g, (chr) => '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).substr(-4)))}`);
+
+                let totalWidth = 0;
+                let totalHeight = 0;
+                let allSameHeightAndY = true;
+                let allSameWidthAndX = true;
+
+                screens.forEach(screen => {
+                    if (screen.x + screen.w > totalWidth) {
+                        totalWidth = screen.x + screen.w;
+                    }
+                    if (screen.y + screen.h > totalHeight) {
+                        totalHeight = screen.y + screen.h;
+                    }
+                    allSameWidthAndX &&= screen.w === totalWidth;
+                    allSameHeightAndY &&= screen.h === totalHeight;
+                });
+
+                if(labelShow && (labelCX < 0 || labelCX > totalWidth)) {
+                    throw 'Label Center X is outside screen';
                 }
-                allSameWidthAndX &&= screen.w === totalWidth;
-                allSameHeightAndY &&= screen.h === totalHeight;
-            });
+                if(labelShow && (labelCY < 0 || labelCY > totalHeight)) {
+                    throw 'Label Center Y is outside screen';
+                }
 
-            if(allSameWidthAndX) screens.sort((s1, s2) => s1.y > s2.y ? 1 : s1.y < s2.y ? -1 : 0);
-            else if(allSameHeightAndY) screens.sort((s1, s2) => s1.x > s2.x ? 1 : s1.x < s2.x ? -1 : 0);
+                if(allSameWidthAndX) screens.sort((s1, s2) => s1.y > s2.y ? 1 : s1.y < s2.y ? -1 : 0);
+                else if(allSameHeightAndY) screens.sort((s1, s2) => s1.x > s2.x ? 1 : s1.x < s2.x ? -1 : 0);
 
-            svgElem.setAttributeNS(null, 'width', totalWidth);
-            svgElem.setAttributeNS(null, 'height', totalHeight);
-            svgElem.setAttributeNS(null, 'viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+                svgElem.setAttributeNS(null, 'width', totalWidth);
+                svgElem.setAttributeNS(null, 'height', totalHeight);
+                svgElem.setAttributeNS(null, 'viewBox', `0 0 ${totalWidth} ${totalHeight}`);
 
-            q('main').classList.toggle('tall', totalHeight > totalWidth);
+                q('main').classList.toggle('tall', totalHeight > totalWidth);
 
-            qs('.total-resolution-text').forEach(elem => elem.textContent = `${totalWidth}x${totalHeight}`);
+                qs('.total-resolution-text').forEach(elem => elem.textContent = `${totalWidth}x${totalHeight}`);
 
-            const colors = ['#a00', '#0a0', '#00a'];
-            const textOffsetX = panelHeight / 30;
-            const textOffsetY = panelHeight / 20;
+                const colors = ['#a00', '#0a0', '#00a'];
+                const textOffsetX = panelHeight / 30;
+                const textOffsetY = panelHeight / 20;
 
-            const fontSize = panelHeight / 6;
+                const fontSize = panelHeight / 6;
 
-            // If the outline is always divisible by 2, the outline rect
-            // can be made smaller to pixel-perfectly fit inside screen area
-            const outlineSize = Math.round(Math.min(panelWidth, panelHeight) / 50 / 2) * 2;
+                // If the outline is always divisible by 2, the outline rect
+                // can be made smaller to pixel-perfectly fit inside screen area
+                const outlineSize = Math.round(Math.min(panelWidth, panelHeight) / 50 / 2) * 2;
 
-            svgElem.innerHTML = `  <defs>
+                svgElem.innerHTML = `  <defs>
     <filter x="-0.05" y="-0.05" width="1.1" height="1.1" id="solid">
       <feFlood flood-color="#0007" result="bg" />
       <feMerge>
@@ -442,211 +457,217 @@
   <g id="masks"></g>
   <g id="label"></g>
 `;
-            const screensElem = q('#screens', svgElem);
-            const masksElem = q('#masks', svgElem);
-            const labelElem = q('#label', svgElem);
-            const maskDefElem = q('#mask-def', svgElem);
+                const screensElem = q('#screens', svgElem);
+                const masksElem = q('#masks', svgElem);
+                const labelElem = q('#label', svgElem);
+                const maskDefElem = q('#mask-def', svgElem);
 
-            screensElem.classList.toggle('show', showType.indexOf('s') >= 0);
-            masksElem.classList.toggle('show', showType.indexOf('m') >= 0);
-            labelElem.classList.toggle('show', showType.indexOf('s') >= 0);
+                screensElem.classList.toggle('show', showType.indexOf('s') >= 0);
+                masksElem.classList.toggle('show', showType.indexOf('m') >= 0);
+                labelElem.classList.toggle('show', showType.indexOf('s') >= 0);
 
-            screens.forEach((screen, i) => {
-                const screenElem = document.createElementNS(svgNS, 'g');
+                screens.forEach((screen, i) => {
+                    const screenElem = document.createElementNS(svgNS, 'g');
 
-                ['w', 'h', 'x', 'y', 'name'].forEach(prop => {
-                    if(!screen.hasOwnProperty(prop)) {
-                        console.error(`Screen "${JSON.stringify(screen)}" has no property "${prop}"`);
-                        throw `Screen "${JSON.stringify(screen)}" has no property "${prop}"`;
+                    ['w', 'h', 'x', 'y', 'name'].forEach(prop => {
+                        if(!screen.hasOwnProperty(prop)) {
+                            console.error(`Screen "${JSON.stringify(screen)}" has no property "${prop}"`);
+                            throw `Screen "${JSON.stringify(screen)}" has no property "${prop}"`;
+                        }
+                    });
+
+                    if(screen.w % panelWidth != 0 || screen.h % panelHeight != 0) {
+                        console.error(`screen.w: ${screen.w}, panelWidth: ${panelWidth}, w%pW = ${screen.w % panelWidth}
+    screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHeight}`);
+                        throw 'Panel width or height is not divisable by panel size';
+                    }
+
+                    if ((Math.floor(screen.w / panelWidth) * Math.floor(screen.h / panelHeight)) > 1000) {
+                        throw `Too many panels on screen "${screen.name}" (> 1 000)`;
+                    }
+
+                    if(screensElem.classList.contains('show')) {
+                        for (let ix = 0; ix < Math.floor(screen.w / panelWidth); ix++) {
+                            for (let iy = 0; iy < Math.floor(screen.h / panelHeight); iy++) {
+                                const x = screen.x + ix * panelWidth;
+                                const y = screen.y + iy * panelHeight;
+
+                                const rectElem = document.createElementNS(svgNS, 'rect');
+                                rectElem.setAttributeNS(null, 'x', x);
+                                rectElem.setAttributeNS(null, 'y', y);
+                                rectElem.setAttributeNS(null, 'width', panelWidth);
+                                rectElem.setAttributeNS(null, 'height', panelHeight);
+                                rectElem.setAttributeNS(null, 'fill', colors[(Math.round(x / panelWidth) + Math.round(y / panelHeight)) % colors.length]);
+                                screenElem.appendChild(rectElem);
+
+                                const textElem = document.createElementNS(svgNS, 'text');
+                                textElem.setAttributeNS(null, 'x', x + textOffsetX);
+                                textElem.setAttributeNS(null, 'y', y + textOffsetY);
+                                textElem.textContent = `${ix + 1},${iy + 1}`;
+                                screenElem.appendChild(textElem);
+                            }
+                        }
+
+                        const outlineElem = document.createElementNS(svgNS, 'rect');
+                        outlineElem.setAttributeNS(null, 'x', screen.x + outlineSize / 2);
+                        outlineElem.setAttributeNS(null, 'y', screen.y + outlineSize / 2);
+                        outlineElem.setAttributeNS(null, 'width', screen.w - outlineSize);
+                        outlineElem.setAttributeNS(null, 'height', screen.h - outlineSize);
+                        outlineElem.classList.add('outline');
+                        screenElem.appendChild(outlineElem);
+
+                        const nameTextElem = document.createElementNS(svgNS, 'text');
+                        nameTextElem.setAttributeNS(null, 'x', screen.x + screen.w / 2);
+                        nameTextElem.setAttributeNS(null, 'y', screen.y + screen.h / 2);
+                        nameTextElem.textContent = screen.name;
+                        nameTextElem.classList.add('name');
+                        nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, screen.w * 0.75);
+                        screenElem.appendChild(nameTextElem);
+
+                        const resTextElem = document.createElementNS(svgNS, 'text');
+                        resTextElem.setAttributeNS(null, 'x', screen.x + textOffsetX);
+                        resTextElem.setAttributeNS(null, 'y', screen.y + screen.h - textOffsetY);
+                        resTextElem.textContent = `${screen.w}x${screen.h}`;
+                        resTextElem.classList.add('res');
+
+                        const offsetTextElem = document.createElementNS(svgNS, 'text');
+                        offsetTextElem.setAttributeNS(null, 'x', screen.x + textOffsetX);
+                        offsetTextElem.setAttributeNS(null, 'y', screen.y + screen.h - fontSize * 1.5 - textOffsetY);
+                        offsetTextElem.textContent = `(${screen.x},${screen.y})`;
+                        offsetTextElem.classList.add('offset');
+
+                        const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, screen.w * 0.9), restrictedTextWidth(offsetTextElem, screen.w * 0.9))}px`;
+                        resTextElem.style.fontSize = resOffsetFontSize;
+                        offsetTextElem.style.fontSize = resOffsetFontSize;
+                        screenElem.appendChild(resTextElem);
+                        screenElem.appendChild(offsetTextElem);
+
+                        screensElem.appendChild(screenElem);
+                    }
+
+                    if(masksElem.classList.contains('show')) {
+                        if (showType.indexOf('-i') < 0 && (allSameWidthAndX || allSameHeightAndY)) {
+                            if(i > 0) {
+
+                                const maskElem = document.createElementNS(svgNS, 'g');
+
+                                const prevScreen = screens[i - 1];
+
+                                let maskX, maskY, maskW, maskH;
+
+                                if(allSameHeightAndY) {
+                                    maskX = prevScreen.x + prevScreen.w;
+                                    maskY = screen.y;
+                                    maskW = screen.x - maskX;
+                                    maskH = screen.h;
+                                } else { // allSameWidth
+                                    maskX = screen.x;
+                                    maskY = prevScreen.y + prevScreen.h;
+                                    maskW = screen.w;
+                                    maskH = screen.y - maskY;
+                                }
+
+                                if(maskW !== 0 && maskH !== 0) {
+                                    const rectElem = document.createElementNS(svgNS, 'rect');
+                                    rectElem.setAttributeNS(null, 'x', maskX);
+                                    rectElem.setAttributeNS(null, 'y', maskY);
+                                    rectElem.setAttributeNS(null, 'width', maskW);
+                                    rectElem.setAttributeNS(null, 'height', maskH);
+                                    rectElem.setAttributeNS(null, 'fill', '#000');
+                                    maskElem.appendChild(rectElem);
+
+                                    if(maskShowLabel) {
+                                        const nameTextElem = document.createElementNS(svgNS, 'text');
+                                        nameTextElem.setAttributeNS(null, 'x', maskX + maskW / 2);
+                                        nameTextElem.setAttributeNS(null, 'y', maskY + maskH / 2);
+                                        nameTextElem.textContent = '[Mask]';
+                                        nameTextElem.classList.add('name');
+                                        nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, maskW * 0.75);
+                                        maskElem.appendChild(nameTextElem);
+                                    }
+
+                                    if(maskShowRes) {
+                                        const resTextElem = document.createElementNS(svgNS, 'text');
+                                        resTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
+                                        resTextElem.setAttributeNS(null, 'y', maskY + maskH - textOffsetY);
+                                        resTextElem.textContent = `${maskW}x${maskH}`;
+                                        resTextElem.classList.add('res');
+
+                                        const offsetTextElem = document.createElementNS(svgNS, 'text');
+                                        offsetTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
+                                        offsetTextElem.setAttributeNS(null, 'y', maskY + maskH - fontSize * 1.5 - textOffsetY);
+                                        offsetTextElem.textContent = `(${maskX},${maskY})`;
+                                        offsetTextElem.classList.add('offset');
+
+                                        const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, maskW * 0.9), restrictedTextWidth(offsetTextElem, maskW * 0.9))}px`;
+                                        resTextElem.style.fontSize = resOffsetFontSize;
+                                        offsetTextElem.style.fontSize = resOffsetFontSize;
+                                        maskElem.appendChild(resTextElem);
+                                        maskElem.appendChild(offsetTextElem);
+                                    }
+
+                                    masksElem.appendChild(maskElem);
+                                }
+                            }
+                        }
+                        else {
+                            const maskForegroundColor = showType.indexOf('-i') >= 0 ? 'white' : 'black';
+                            const maskBackgroundColor = showType.indexOf('-i') >= 0 ? 'black' : 'white';
+
+                            if(i === 0) {
+                                const maskElem = document.createElementNS(svgNS, 'rect');
+                                maskElem.setAttributeNS(null, 'x', 0);
+                                maskElem.setAttributeNS(null, 'y', 0);
+                                maskElem.setAttributeNS(null, 'width', totalWidth);
+                                maskElem.setAttributeNS(null, 'height', totalHeight);
+                                maskElem.classList.add('mask');
+                                maskElem.setAttribute('mask', 'url(#mask-def)');
+                                masksElem.appendChild(maskElem);
+
+                                const maskBackgroundElem = document.createElementNS(svgNS, 'rect');
+                                maskBackgroundElem.setAttributeNS(null, 'x', 0);
+                                maskBackgroundElem.setAttributeNS(null, 'y', 0);
+                                maskBackgroundElem.setAttributeNS(null, 'width', totalWidth);
+                                maskBackgroundElem.setAttributeNS(null, 'height', totalHeight);
+                                maskBackgroundElem.style.fill = maskBackgroundColor;
+                                maskDefElem.appendChild(maskBackgroundElem);
+                            }
+
+                            const maskScreenElem = document.createElementNS(svgNS, 'rect');
+                            maskScreenElem.setAttributeNS(null, 'x', screen.x);
+                            maskScreenElem.setAttributeNS(null, 'y', screen.y);
+                            maskScreenElem.setAttributeNS(null, 'width', screen.w);
+                            maskScreenElem.setAttributeNS(null, 'height', screen.h);
+                            maskScreenElem.style.fill = maskForegroundColor;
+                            maskDefElem.appendChild(maskScreenElem);
+                        }
                     }
                 });
 
-                if(screen.w % panelWidth != 0 || screen.h % panelHeight != 0) {
-                    console.error(`screen.w: ${screen.w}, panelWidth: ${panelWidth}, w%pW = ${screen.w % panelWidth}
-screen.h: ${screen.h}, panelHeight: ${panelHeight}, h%pH = ${screen.h % panelHeight}`);
-                    throw 'Panel width or height is not divisable by panel size';
+                if (labelShow && labelElem.classList.contains('show')) {
+                    const labelTextElem = document.createElementNS(svgNS, 'text');
+                    labelTextElem.setAttributeNS(null, 'x', labelCX);
+                    labelTextElem.setAttributeNS(null, 'y', labelCY);
+                    let labelTextText = labelText;
+                    if(labelShowRes)
+                        labelTextText += (labelText ? '\n' : '') + `${totalWidth}x${totalHeight}`;
+                    labelTextElem.textContent = labelTextText;
+                    labelTextElem.classList.add('name');
+                    labelTextElem.style.fontSize = `${labelSize}px`;
+                    labelElem.appendChild(labelTextElem);
                 }
 
-                for (let ix = 0; ix < Math.floor(screen.w / panelWidth); ix++) {
-                    for (let iy = 0; iy < Math.floor(screen.h / panelHeight); iy++) {
-                        const x = screen.x + ix * panelWidth;
-                        const y = screen.y + iy * panelHeight;
+                imgElem.src = '';
 
-                        const rectElem = document.createElementNS(svgNS, 'rect');
-                        rectElem.setAttributeNS(null, 'x', x);
-                        rectElem.setAttributeNS(null, 'y', y);
-                        rectElem.setAttributeNS(null, 'width', panelWidth);
-                        rectElem.setAttributeNS(null, 'height', panelHeight);
-                        rectElem.setAttributeNS(null, 'fill', colors[(Math.round(x / panelWidth) + Math.round(y / panelHeight)) % colors.length]);
-                        screenElem.appendChild(rectElem);
-
-                        const textElem = document.createElementNS(svgNS, 'text');
-                        textElem.setAttributeNS(null, 'x', x + textOffsetX);
-                        textElem.setAttributeNS(null, 'y', y + textOffsetY);
-                        textElem.textContent = `${ix + 1},${iy + 1}`;
-                        screenElem.appendChild(textElem);
-                    }
-                }
-
-                const outlineElem = document.createElementNS(svgNS, 'rect');
-                outlineElem.setAttributeNS(null, 'x', screen.x + outlineSize / 2);
-                outlineElem.setAttributeNS(null, 'y', screen.y + outlineSize / 2);
-                outlineElem.setAttributeNS(null, 'width', screen.w - outlineSize);
-                outlineElem.setAttributeNS(null, 'height', screen.h - outlineSize);
-                outlineElem.classList.add('outline');
-                screenElem.appendChild(outlineElem);
-
-                const nameTextElem = document.createElementNS(svgNS, 'text');
-                nameTextElem.setAttributeNS(null, 'x', screen.x + screen.w / 2);
-                nameTextElem.setAttributeNS(null, 'y', screen.y + screen.h / 2);
-                nameTextElem.textContent = screen.name;
-                nameTextElem.classList.add('name');
-                nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, screen.w * 0.75);
-                screenElem.appendChild(nameTextElem);
-
-                const resTextElem = document.createElementNS(svgNS, 'text');
-                resTextElem.setAttributeNS(null, 'x', screen.x + textOffsetX);
-                resTextElem.setAttributeNS(null, 'y', screen.y + screen.h - textOffsetY);
-                resTextElem.textContent = `${screen.w}x${screen.h}`;
-                resTextElem.classList.add('res');
-
-                const offsetTextElem = document.createElementNS(svgNS, 'text');
-                offsetTextElem.setAttributeNS(null, 'x', screen.x + textOffsetX);
-                offsetTextElem.setAttributeNS(null, 'y', screen.y + screen.h - fontSize * 1.5 - textOffsetY);
-                offsetTextElem.textContent = `(${screen.x},${screen.y})`;
-                offsetTextElem.classList.add('offset');
-
-                const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, screen.w * 0.9), restrictedTextWidth(offsetTextElem, screen.w * 0.9))}px`;
-                resTextElem.style.fontSize = resOffsetFontSize;
-                offsetTextElem.style.fontSize = resOffsetFontSize;
-                screenElem.appendChild(resTextElem);
-                screenElem.appendChild(offsetTextElem);
-
-                if(masksElem.classList.contains('show')) {
-                    if (allSameWidthAndX || allSameHeightAndY) {
-                        if(i > 0) {
-
-                            const maskElem = document.createElementNS(svgNS, 'g');
-
-                            const prevScreen = screens[i - 1];
-
-                            let maskX, maskY, maskW, maskH;
-
-                            if(allSameHeightAndY) {
-                                maskX = prevScreen.x + prevScreen.w;
-                                maskY = screen.y;
-                                maskW = screen.x - maskX;
-                                maskH = screen.h;
-                            } else { // allSameWidth
-                                maskX = screen.x;
-                                maskY = prevScreen.y + prevScreen.h;
-                                maskW = screen.w;
-                                maskH = screen.y - maskY;
-                            }
-
-                            if(maskW !== 0 && maskH !== 0) {
-                                const rectElem = document.createElementNS(svgNS, 'rect');
-                                rectElem.setAttributeNS(null, 'x', maskX);
-                                rectElem.setAttributeNS(null, 'y', maskY);
-                                rectElem.setAttributeNS(null, 'width', maskW);
-                                rectElem.setAttributeNS(null, 'height', maskH);
-                                rectElem.setAttributeNS(null, 'fill', '#000');
-                                maskElem.appendChild(rectElem);
-
-                                if(maskShowLabel) {
-                                    const nameTextElem = document.createElementNS(svgNS, 'text');
-                                    nameTextElem.setAttributeNS(null, 'x', maskX + maskW / 2);
-                                    nameTextElem.setAttributeNS(null, 'y', maskY + maskH / 2);
-                                    nameTextElem.textContent = '[Mask]';
-                                    nameTextElem.classList.add('name');
-                                    nameTextElem.style.fontSize = restrictedTextWidth(nameTextElem, maskW * 0.75);
-                                    maskElem.appendChild(nameTextElem);
-                                }
-
-                                if(maskShowRes) {
-                                    const resTextElem = document.createElementNS(svgNS, 'text');
-                                    resTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
-                                    resTextElem.setAttributeNS(null, 'y', maskY + maskH - textOffsetY);
-                                    resTextElem.textContent = `${maskW}x${maskH}`;
-                                    resTextElem.classList.add('res');
-
-                                    const offsetTextElem = document.createElementNS(svgNS, 'text');
-                                    offsetTextElem.setAttributeNS(null, 'x', maskX + textOffsetX);
-                                    offsetTextElem.setAttributeNS(null, 'y', maskY + maskH - fontSize * 1.5 - textOffsetY);
-                                    offsetTextElem.textContent = `(${maskX},${maskY})`;
-                                    offsetTextElem.classList.add('offset');
-
-                                    const resOffsetFontSize = `${pixelMin(restrictedTextWidth(resTextElem, maskW * 0.9), restrictedTextWidth(offsetTextElem, maskW * 0.9))}px`;
-                                    resTextElem.style.fontSize = resOffsetFontSize;
-                                    offsetTextElem.style.fontSize = resOffsetFontSize;
-                                    maskElem.appendChild(resTextElem);
-                                    maskElem.appendChild(offsetTextElem);
-                                }
-
-                                masksElem.appendChild(maskElem);
-                            }
-                        }
-                    }
-                    else {
-                        if(i === 0) {
-                            const maskElem = document.createElementNS(svgNS, 'rect');
-                            maskElem.setAttributeNS(null, 'x', 0);
-                            maskElem.setAttributeNS(null, 'y', 0);
-                            maskElem.setAttributeNS(null, 'width', totalWidth);
-                            maskElem.setAttributeNS(null, 'height', totalHeight);
-                            maskElem.classList.add('mask');
-                            maskElem.setAttribute('mask', 'url(#mask-def)');
-                            masksElem.appendChild(maskElem);
-
-                            const maskBackgroundElem = document.createElementNS(svgNS, 'rect');
-                            maskBackgroundElem.setAttributeNS(null, 'x', 0);
-                            maskBackgroundElem.setAttributeNS(null, 'y', 0);
-                            maskBackgroundElem.setAttributeNS(null, 'width', totalWidth);
-                            maskBackgroundElem.setAttributeNS(null, 'height', totalHeight);
-                            maskBackgroundElem.style.fill = 'white';
-                            maskDefElem.appendChild(maskBackgroundElem);
-                        }
-
-                        const maskScreenElem = document.createElementNS(svgNS, 'rect');
-                        maskScreenElem.setAttributeNS(null, 'x', screen.x);
-                        maskScreenElem.setAttributeNS(null, 'y', screen.y);
-                        maskScreenElem.setAttributeNS(null, 'width', screen.w);
-                        maskScreenElem.setAttributeNS(null, 'height', screen.h);
-                        maskScreenElem.style.fill = 'black';
-                        maskDefElem.appendChild(maskScreenElem);
-                    }
-                }
-
-                screensElem.appendChild(screenElem);
-            });
-
-            labelCXElem.max = totalWidth;
-            labelCYElem.max = totalHeight;
-            labelSizeElem.max = totalHeight;
-
-            if (labelShow) {
-                const labelTextElem = document.createElementNS(svgNS, 'text');
-                labelTextElem.setAttributeNS(null, 'x', labelCX);
-                labelTextElem.setAttributeNS(null, 'y', labelCY);
-                let labelTextText = labelText;
-                if(labelShowRes)
-                    labelTextText += (labelText ? '\n' : '') + `${totalWidth}x${totalHeight}`;
-                labelTextElem.textContent = labelTextText;
-                labelTextElem.classList.add('name');
-                labelTextElem.style.fontSize = `${labelSize}px`;
-                labelElem.appendChild(labelTextElem);
+                hideWarning();
+            } catch(exception) {
+                console.error('Exception: ', exception);
+                showWarning(exception);
             }
-
-            imgElem.src = '';
         }
 
         formElem.addEventListener('input', event => {
-            try {
-                updateCanvas();
-                hideWarning();
-            } catch(exception) {
-                showWarning(exception);
-            }
+            updateCanvas();
         });
 
         formElem.addEventListener('submit', event => {
