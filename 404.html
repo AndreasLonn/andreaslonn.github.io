@@ -6,7 +6,7 @@
         let pathname = window.location.pathname;
         if(pathname[pathname.length - 1] === '/') pathname = pathname.substr(0, pathname.length - 1);
         switch(pathname) {
-            case '/n':
+            case '/no':
             case '/notes':
                 redirectUrl = 'https://notes.andreaslonn.se';
                 break;
@@ -46,6 +46,10 @@
             case '/schar':
             case '/specchars':
                 redirectUrl = '/specchars.html';
+                break;
+            case '/n':
+            case '/notepad':
+                redirectUrl = '/notepad.html';
                 break;
         }
         if(redirectUrl) window.location.href = redirectUrl;
@@ -105,6 +109,10 @@
 
             <li><a href="/specchars.html">
                 Special Characters
+            </a></li>
+
+            <li><a href="/notepad.html">
+                Notepad
             </a></li>
         </ul>
         <a href="https://github.com/AndreasLonn/andreaslonn.github.io">To GitHub</a>

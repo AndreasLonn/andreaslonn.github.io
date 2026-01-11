@@ -21,3 +21,6 @@ This repository contains web pages. Here are links:
 
 ## [Special Characters](https://andreaslonn.se/specchars.html)
 [Special Characters](https://andreaslonn.se/specchars.html) is a collection of special characters.
+
+## [Notepad](https://andreaslonn.se/notepad.html)
+[Notepad](https://andreaslonn.se/notepad.html) is a notepad, online. It does not store any data.

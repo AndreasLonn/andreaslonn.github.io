@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+    +---------+
+    | Notepad |
+    +---------+
+    https://andreaslonn.se/notepad.html
+
+    Hello
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notepad</title>
+    <style>
+        @import url(toolstyle.css) layer(toolstyle);
+        body {
+            margin: 0;
+            height: 100vh;
+        }
+        textarea {
+            padding: 0.5em;
+            margin: 0;
+            border: none;
+            box-sizing: border-box;
+            width: 100%;
+            font-size: larger;
+            resize: none;
+            height: 100%;
+	    background: none;
+        }
+    </style>
+</head>
+
+<body>
+    <textarea id="notes" placeholder="Notes"></textarea>
+</body>
+</html>
