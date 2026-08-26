@@ -29,7 +29,27 @@
         h1 {
             text-align: center;
             margin: 0;
-            padding-bottom: 2em;
+            padding-bottom: 1em;
+        }
+        #filter {
+            align-self: center;
+            box-sizing: border-box;
+            width: min(100%, 30em);
+            margin-bottom: 2em;
+            border: 0.15em solid var(--on-background-color);
+            border-radius: 0.5em;
+            padding: 0.75em 1em;
+            background: var(--background-color);
+            color: var(--on-background-color);
+            font: inherit;
+        }
+        #filter::placeholder {
+            color: inherit;
+            opacity: 0.65;
+        }
+        #filter:focus {
+            outline: 0.15em solid var(--on-background-color);
+            outline-offset: 0.15em;
         }
         #chars {
             display: grid;
@@ -51,6 +71,9 @@
             justify-content: center;
             transition: background-color 0.3s;
             user-select: none;
+        }
+        #chars > label[hidden] {
+            display: none;
         }
         @media (max-width: 700px) { #chars { --columns: 4; } }
         @media (max-width: 550px) { #chars { --columns: 3; } }
@@ -92,11 +115,28 @@
         #toast.visible {
             opacity: 1;
         }
+        #empty {
+            margin: 0;
+            text-align: center;
+        }
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
     </style>
 </head>
 <body>
     <main>
         <h1>Special Characters</h1>
+
+        <input id="filter" type="search" placeholder="Filter special characters&mldr;" aria-label="Filter special characters" aria-controls="chars" autocomplete="off" spellcheck="false">
 
         <section id="chars">
             <label><input type="text" readonly value="&nbsp;"><span>Non-breaking Space</span></label>
@@ -118,8 +158,9 @@
             <label><input type="text" readonly value="&#x037E;"><span>Greek Question Mark</span></label>
             <label><input type="text" readonly value="&#x2A75;"><span>Double Equals</span></label>
             <label><input type="text" readonly value="&#x2A76;"><span>Triple Equals</span></label>
-            <label><input type="text" readonly value="&mldr;"><span>Ellipsis</span></label>
+            <label><input type="text" readonly value="&mldr;"><span data-extra-match="...">Ellipsis</span></label>
             <label><input type="text" readonly value="&check;"><span>Check Mark</span></label>
+            <label><input type="text" readonly value="&#x00B1;"><span>Plus-minus</span></label>
             <label><input type="text" readonly value="&asymp;"><span>Approximately</span></label>
             <label><input type="text" readonly value="&infin;"><span>Infinity</span></label>
             <label><input type="text" readonly value="&#x2318;"><span>Place of Interest (Mac Command)</span></label>
@@ -132,6 +173,9 @@
             <label><input type="text" readonly value="&#xFFFD;"><span>Replace&shy;ment Character</span></label>
         </section>
 
+        <p id="empty" hidden>No matching special characters.</p>
+        <p id="filter-status" class="visually-hidden" role="status" aria-live="polite"></p>
+
         <div id="toast"></div>
     </main>
 
@@ -139,7 +183,79 @@
         function q(elem, parent=document) { return parent.querySelector(elem); }
         function qs(elems, parent=document) { return parent.querySelectorAll(elems); }
 
+        const filter = q('#filter');
+        const charLabels = [...qs('#chars > label')];
+        const empty = q('#empty');
+        const filterStatus = q('#filter-status');
         const toast = q('#toast');
+
+        function normalizeFilterText(value) {
+            return value
+                .toLowerCase()
+                .replace(/\u00ad/g, '')
+                .replace(/-/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        const charValues = new Map();
+
+        charLabels.forEach(label => {
+            const charInput = q('input', label);
+            const charLabel = q('span', label);
+            const extraMatch = charLabel.dataset.extraMatch || '';
+            charValues.set(label, charInput.value);
+            label.dataset.filterText = normalizeFilterText(`${charInput.value} ${charLabel.textContent} ${extraMatch}`);
+        });
+
+        filter.addEventListener('input', () => {
+            const hasQuery = filter.value.length !== 0;
+            const normalizedQuery = normalizeFilterText(filter.value);
+            const terms = normalizedQuery.split(' ').filter(Boolean);
+            let visibleCount = 0;
+
+            charLabels.forEach(label => {
+                const matches = !hasQuery
+                    || (terms.length !== 0
+                        ? terms.every(term => label.dataset.filterText.includes(term))
+                        : charValues.get(label) === filter.value);
+                label.hidden = !matches;
+                if(matches)
+                    visibleCount++;
+            });
+
+            empty.hidden = visibleCount !== 0;
+            filterStatus.textContent = `${visibleCount} matching special ${visibleCount === 1 ? 'character' : 'characters'}.`;
+        });
+
+        const isApplePlatform = /Mac|iPhone|iPad|iPod/.test(
+            navigator.userAgentData?.platform || navigator.platform || ''
+        );
+
+        document.addEventListener('keydown', event => {
+            const isAltGraph = event.getModifierState('AltGraph');
+            const isTextKey = [...event.key].length === 1
+                || event.key === 'Dead'
+                || event.key === 'Process'
+                || event.key === 'Unidentified';
+            const isEditingKey = event.key === 'Backspace' || event.key === 'Delete';
+            const isShortcut = event.metaKey
+                || (event.ctrlKey && !isAltGraph)
+                || (event.altKey && !isAltGraph && !isApplePlatform);
+
+            if(    event.defaultPrevented
+                || event.target === filter
+                || isShortcut
+                || (!isTextKey && !isEditingKey))
+                return;
+
+            filter.focus();
+        });
+
+        document.addEventListener('compositionstart', event => {
+            if(event.target !== filter)
+                filter.focus();
+        }, true);
 
         function showToast(message) {
             toast.textContent = message;
@@ -149,7 +265,7 @@
             }, 1500);
         }
 
-        qs('#chars > label').forEach(label => {
+        charLabels.forEach(label => {
             label.addEventListener('click', async () => {
                 const charInput = q('input', label);
                 const charLabel = q('span', label);
