@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<!--
+    +-----------+
+    | Scheduler |
+    +-----------+
+    https://andreaslonn.se/scheduler.html
+
+    Hello
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduler</title>
+    <style>
+        @import url(toolstyle.css) layer(toolstyle);
+
+        /* --- COLOR THEMES --- */
+        :root {
+            --primary: var(--on-background-color);
+            --primary-hover: color-mix(in srgb, var(--on-background-color) 80%, var(--background-color));
+            --bg: var(--background-color);
+            --card: var(--background-color);
+            --border: color-mix(in srgb, var(--on-background-color) 30%, var(--background-color));
+            --text: var(--on-background-color);
+            --text-muted: color-mix(in srgb, var(--on-background-color) 60%, var(--background-color));
+            --input-bg: var(--background-color);
+
+            --success-bg: #dcfce7;
+            --success-text: #14532d;
+            --success-border: #22c55e;
+
+            --danger-bg: #fee2e2;
+            --danger-text: #7f1d1d;
+            --danger-border: #ef4444;
+
+            --header-bg: var(--background-color-alt);
+            --sticky-bg: var(--background-color);
+
+            --working-bg: #dbeafe;
+            --working-text: #1e40af;
+            --working-border: #3b82f6;
+
+            --swap-bg: #fef3c7;
+            --swap-text: #92400e;
+            --swap-border: #f59e0b;
+
+            --blocked-bg: var(--background-color-alt);
+            --blocked-hover: color-mix(in srgb, var(--on-background-color) 20%, var(--background-color));
+
+            --toast-bg: var(--on-background-color);
+            --toast-text: var(--background-color);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --success-bg: #14532d;
+                --success-text: #dcfce7;
+                --success-border: #4ade80;
+
+                --danger-bg: #7f1d1d;
+                --danger-text: #fee2e2;
+                --danger-border: #f87171;
+
+                --working-bg: #172554;
+                --working-text: #bfdbfe;
+                --working-border: #3b82f6;
+            }
+        }
+
+        body {
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+        h1, h2 { color: var(--text); margin-top: 0; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text);
+        }
+
+        input[type="text"], input[type="number"], select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1rem;
+            background-color: var(--input-bg);
+            color: var(--text);
+        }
+
+        button {
+            background-color: var(--primary);
+            color: var(--background-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        button.secondary { background-color: var(--text-muted); }
+        button.secondary:hover { background-color: var(--on-background-color); }
+        button.delete {
+            background-color: transparent;
+            color: var(--danger-border);
+            border: 1px solid var(--danger-border);
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+        button.delete:hover { background-color: var(--danger-bg); }
+
+        .list-container { margin-top: 10px; border-top: 1px solid var(--border); }
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid var(--border);
+        }
+        .hint { font-size: 0.85rem; color: var(--text-muted); margin-top: -5px; margin-bottom: 10px; }
+
+        /* --- TEXTAREA JSON --- */
+        textarea.json-box {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--input-bg);
+            color: var(--text);
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
+
+        /* --- TABLE STYLES --- */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 15px;
+            background: var(--card);
+            position: relative;
+        }
+
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            white-space: nowrap;
+        }
+
+        th, td {
+            padding: 10px 15px;
+            text-align: center;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: var(--header-bg);
+            font-weight: 700;
+            color: var(--text);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th:first-child, td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: var(--sticky-bg);
+            border-right: 2px solid var(--border);
+            z-index: 20;
+            font-weight: bold;
+            text-align: left;
+            min-width: 80px;
+        }
+        th:first-child { z-index: 30; background-color: var(--header-bg); }
+
+        .clickable-cell { cursor: pointer; transition: background 0.1s; }
+        .clickable-cell:hover { background-color: var(--blocked-hover); }
+
+        .cell-blocked-input {
+            background-color: var(--blocked-bg);
+            color: var(--text);
+            font-weight: bold;
+            box-shadow: inset 0 0 0 2px var(--text-muted);
+        }
+
+        td.cell-working {
+            background-color: var(--working-bg);
+            color: var(--working-text);
+            border: 1px solid var(--working-border);
+            font-weight: bold;
+        }
+        td.cell-working-sub {
+            background-color: var(--success-bg);
+            color: var(--success-text);
+            border: 1px solid var(--success-border);
+            font-weight: bold;
+            font-style: italic;
+        }
+        td.cell-working-swap {
+            background-color: var(--swap-bg);
+            color: var(--swap-text);
+            border: 1px solid var(--swap-border);
+            font-weight: bold;
+            font-style: italic;
+        }
+        td.cell-conflict {
+            background-color: var(--danger-bg);
+            color: var(--danger-text);
+            border: 2px solid var(--danger-border);
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        td.cell-blocked {
+             background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(128,128,128,0.1) 5px, rgba(128,128,128,0.1) 10px);
+            color: var(--text-muted); font-size: 0.8rem;
+        }
+
+        .stats {
+            margin-top: 10px; padding: 15px; border-radius: 4px; display: none; border: 1px solid var(--border);
+        }
+        .order-flow { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 0.9rem; }
+
+        .action-bar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;}
+
+        /* --- TOAST (SNACKBAR) STYLES --- */
+        #toast-container {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; gap: 10px; z-index: 9999;
+            width: 90%; max-width: 400px; pointer-events: none;
+        }
+        .toast {
+            background-color: var(--toast-bg); color: var(--toast-text);
+            padding: 12px 16px; border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 0.95rem;
+            display: flex; align-items: center; justify-content: space-between;
+            animation: slideUp 0.3s ease-out; pointer-events: auto; border-left: 5px solid var(--primary);
+        }
+        .toast.error { border-left-color: var(--danger-border); }
+        .toast.success { border-left-color: var(--success-border); }
+
+        /* Updated close button */
+        .toast-close {
+            /* Negative margins extend the hit area to the edge of the toast. */
+            margin: -12px -16px -12px 10px;
+            /* Padding keeps the icon aligned while preserving a large hit area. */
+            padding: 12px 16px;
+
+            cursor: pointer;
+            opacity: 0.7;
+            font-size: 1.2rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+        .toast-close:hover { opacity: 1; background-color: rgba(255,255,255,0.05); }
+
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 10000;
+        }
+        .modal-content {
+            background: var(--card); padding: 20px; border-radius: 8px;
+            width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header { font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; display: flex; justify-content: space-between;}
+        .url-input-display {
+            width: 100%; padding: 12px; border: 2px solid var(--primary);
+            background: var(--input-bg); color: var(--text); border-radius: 4px;
+            font-family: monospace; font-size: 0.9rem; margin-bottom: 15px; box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Scheduler</h1>
+
+    <div class="card">
+        <h2>1. Week Range</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Start Week</label>
+                <input type="number" id="startWeek" min="1" max="53" enterkeyhint="next" onchange="renderBlockMatrix()" onkeydown="handleIntervalNav(event, 'endWeek')">
+            </div>
+            <div class="form-group">
+                <label>End Week</label>
+                <input type="number" id="endWeek" min="1" max="53" enterkeyhint="done" onchange="renderBlockMatrix()" onkeydown="handleIntervalNav(event, null)">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>2. People</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="personName" placeholder="e.g. Anna"
+                       enterkeyhint="enter" onkeypress="handlePersonEnter(event)"
+                       autocapitalize="words" autocomplete="off" spellcheck="false">
+            </div>
+            <button onclick="addPerson()">Add</button>
+        </div>
+        <div class="list-container" id="personList"></div>
+    </div>
+
+    <div class="card">
+        <h2>3. Unavailability</h2>
+        <p class="hint">Click a cell in the table to toggle it, or use batch entry.</p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Person (Batch)</label>
+                <select id="blockPerson"><option value="">Select a person...</option></select>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label>Batch Entry (e.g. 5, 8, 10-12)</label>
+                <input type="text" id="blockWeeksInput" placeholder="e.g. 5, 8, 10-12" enterkeyhint="done" onkeypress="handleBlockEnter(event)">
+            </div>
+            <button class="secondary" onclick="addBlockBatch()">Mark Unavailable</button>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="blockMatrixTable">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <p class="hint" style="text-align:center; margin-top:5px;">(X = Unavailable)</p>
+    </div>
+
+    <div class="card">
+        <h2>4. Schedule</h2>
+        <button onclick="generateOptimalSchedule()">Generate Best Schedule</button>
+        <div id="loading" style="display:none; margin-top:10px; color: var(--primary);">Calculating...</div>
+
+        <div id="statsBox" class="stats"></div>
+
+        <div class="table-wrapper">
+            <table id="resultTable">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>5. Save / Load / Share</h2>
+        <div class="action-bar">
+            <button class="action-btn" onclick="openShareModal()">🔗 Share Link</button>
+            <button class="action-btn secondary" onclick="exportJson()">⬇️ Show JSON</button>
+            <button class="action-btn secondary" onclick="importJson()">⬆️ Load JSON</button>
+        </div>
+
+        <label>JSON Data:</label>
+        <textarea id="jsonArea" class="json-box" placeholder='Select "Show JSON" to view the data.'></textarea>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<div id="shareModal" class="modal-overlay" onclick="closeShareModal(event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>Copy Your Link</span>
+            <span style="cursor:pointer;" onclick="closeShareModal(true)">✕</span>
+        </div>
+        <p style="font-size:0.9rem; margin-bottom:10px;">This link contains all your data. Copy it below:</p>
+        <input type="text" id="shareUrlInput" class="url-input-display" readonly>
+        <div style="text-align: right;">
+            <button class="secondary" onclick="closeShareModal(true)">Close</button>
+            <button onclick="copyFromModal()">Copy</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- TOAST ---
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `<span>${message}</span><span class="toast-close" onclick="this.parentElement.remove()">✕</span>`;
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentElement) { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); } }, 4000);
+    }
+
+    // --- INIT ---
+    window.onload = function() {
+        if (window.location.hash.length > 1) {
+            try {
+                loadFromHash();
+                if (people.length > 0) setTimeout(generateOptimalSchedule, 200);
+                showToast("Schedule loaded!", "success");
+            } catch (e) {
+                console.error(e);
+                showToast("Could not load the link.", "error");
+                setDefaultDate();
+            }
+        } else {
+            setDefaultDate();
+        }
+    };
+
+    function setDefaultDate() {
+        const now = new Date();
+        const week = getISOWeek(now);
+        document.getElementById('startWeek').value = week;
+        document.getElementById('endWeek').value = Math.min(week + 11, 52);
+        renderBlockMatrix();
+    }
+
+    function getISOWeek(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    // --- STATE ---
+    let people = [];
+    let blockedWeeks = [];
+
+    // --- UI HELPERS ---
+    function handleIntervalNav(e, nextId) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (nextId) document.getElementById(nextId).focus();
+            else { e.target.blur(); renderBlockMatrix(); }
+        }
+    }
+    function handlePersonEnter(e) { if (e.key === "Enter") addPerson(); }
+    function handleBlockEnter(e) { if (e.key === "Enter") addBlockBatch(); }
+
+    function addPerson() {
+        const nameInput = document.getElementById('personName');
+        const name = nameInput.value.trim();
+        if (!name) return;
+        if (people.includes(name)) { showToast("That person already exists!", "error"); return; }
+        people.push(name);
+        nameInput.value = '';
+        renderPeople(); updateSelectDropdown(); renderBlockMatrix();
+        showToast(`Added ${name}`, "success");
+    }
+
+    function removePerson(name) {
+        people = people.filter(p => p !== name);
+        blockedWeeks = blockedWeeks.filter(b => b.name !== name);
+        renderPeople(); updateSelectDropdown(); renderBlockMatrix();
+        showToast(`Removed ${name}`);
+    }
+
+    function renderPeople() {
+        const list = document.getElementById('personList');
+        list.innerHTML = '';
+        people.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `<span>${p}</span> <button class="delete" onclick="removePerson('${p}')">Remove</button>`;
+            list.appendChild(div);
+        });
+    }
+
+    function updateSelectDropdown() {
+        const select = document.getElementById('blockPerson');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Select a person...</option>';
+        people.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p; opt.innerText = p; select.appendChild(opt);
+        });
+        if (people.includes(currentVal)) select.value = currentVal;
+    }
+
+    // --- UNAVAILABILITY ---
+    function addBlockBatch() {
+        const name = document.getElementById('blockPerson').value;
+        const inputStr = document.getElementById('blockWeeksInput').value.trim();
+        if (!name) { showToast("Select a person first.", "error"); return; }
+        if (!inputStr) return;
+
+        const parts = inputStr.split(',');
+        for (let part of parts) {
+            part = part.trim();
+            if (!part) continue;
+            if (part.includes('-')) {
+                const range = part.split('-');
+                if (range.length === 2) {
+                    const s = parseInt(range[0]), e = parseInt(range[1]);
+                    if (!isNaN(s) && !isNaN(e) && s <= e) {
+                        for (let i = s; i <= e; i++) toggleBlock(name, i, true);
+                    }
+                }
+            } else {
+                const w = parseInt(part);
+                if (!isNaN(w)) toggleBlock(name, w, true);
+            }
+        }
+        document.getElementById('blockWeeksInput').value = '';
+        renderBlockMatrix();
+        showToast("Unavailability recorded.", "success");
+    }
+
+    function toggleBlock(name, week, forceAdd) {
+        const index = blockedWeeks.findIndex(b => b.name === name && b.week === week);
+        if (forceAdd === true) { if (index === -1) blockedWeeks.push({ name, week }); }
+        else if (forceAdd === false) { if (index !== -1) blockedWeeks.splice(index, 1); }
+        else { if (index === -1) blockedWeeks.push({ name, week }); else blockedWeeks.splice(index, 1); }
+        renderBlockMatrix();
+    }
+
+    function renderBlockMatrix() {
+        const table = document.getElementById('blockMatrixTable');
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        thead.innerHTML = ''; tbody.innerHTML = '';
+
+        const startW = parseInt(document.getElementById('startWeek').value) || 1;
+        const endW = parseInt(document.getElementById('endWeek').value) || 10;
+        const weeks = [];
+        for (let w = startW; w <= endW; w++) weeks.push(w);
+
+        const trHead = document.createElement('tr');
+        const thCorner = document.createElement('th');
+        thCorner.innerText = "Person";
+        trHead.appendChild(thCorner);
+        weeks.forEach(w => {
+            const th = document.createElement('th');
+            th.innerText = w;
+            trHead.appendChild(th);
+        });
+        thead.appendChild(trHead);
+
+        const sortedPeople = [...people].sort();
+        sortedPeople.forEach(person => {
+            const tr = document.createElement('tr');
+            const tdName = document.createElement('td');
+            tdName.innerText = person;
+            tr.appendChild(tdName);
+
+            weeks.forEach(w => {
+                const td = document.createElement('td');
+                const isBlocked = blockedWeeks.some(b => b.name === person && b.week === w);
+                td.className = 'clickable-cell';
+                if (isBlocked) { td.classList.add('cell-blocked-input'); td.innerText = "X"; }
+                else { td.innerText = ""; }
+                td.onclick = () => toggleBlock(person, w);
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- JSON & DATA ---
+    function toBase64(str) { return btoa(unescape(encodeURIComponent(str))); }
+    function fromBase64(str) { return decodeURIComponent(escape(atob(str))); }
+
+    function getDataObject() {
+        const peopleObj = {};
+        people.forEach(p => {
+            const weeks = blockedWeeks.filter(b => b.name === p).map(b => b.week).sort((a, b) => a - b);
+            peopleObj[p] = weeks;
+        });
+        return {
+            startWeek: parseInt(document.getElementById('startWeek').value),
+            endWeek: parseInt(document.getElementById('endWeek').value),
+            people: peopleObj
+        };
+    }
+
+    function loadData(data) {
+        if (!data) return;
+        document.getElementById('startWeek').value = data.startWeek || 1;
+        document.getElementById('endWeek').value = data.endWeek || 10;
+
+        if (data.people && !Array.isArray(data.people) && typeof data.people === 'object') {
+            people = Object.keys(data.people);
+            blockedWeeks = [];
+            for (const [name, weeks] of Object.entries(data.people)) {
+                if (Array.isArray(weeks)) {
+                    weeks.forEach(w => { blockedWeeks.push({ name: name, week: w }); });
+                }
+            }
+        } else {
+            people = Array.isArray(data.people) ? data.people : [];
+            blockedWeeks = Array.isArray(data.blockedWeeks) ? data.blockedWeeks : [];
+        }
+
+        renderPeople(); updateSelectDropdown(); renderBlockMatrix();
+        document.querySelector('#resultTable thead').innerHTML = '';
+        document.querySelector('#resultTable tbody').innerHTML = '';
+        document.getElementById('statsBox').style.display = 'none';
+    }
+
+    function exportJson() {
+        document.getElementById('jsonArea').value = JSON.stringify(getDataObject(), null, 2);
+        showToast("JSON generated.", "success");
+    }
+
+    function importJson() {
+        const jsonStr = document.getElementById('jsonArea').value.trim();
+        if (!jsonStr) { showToast("The text area is empty.", "error"); return; }
+        try {
+            loadData(JSON.parse(jsonStr));
+            showToast("Data loaded!", "success");
+            if (people.length > 0) setTimeout(generateOptimalSchedule, 200);
+        } catch (e) { showToast("Invalid JSON.", "error"); }
+    }
+
+    function openShareModal() {
+        const url = window.location.protocol + "//" + window.location.host + window.location.pathname + "#" + toBase64(JSON.stringify(getDataObject()));
+        const input = document.getElementById('shareUrlInput');
+        input.value = url;
+        document.getElementById('shareModal').style.display = 'flex';
+        setTimeout(() => { input.select(); input.setSelectionRange(0, 99999); }, 100);
+        history.pushState(null, null, "#" + toBase64(JSON.stringify(getDataObject())));
+    }
+    function closeShareModal(force) { if (force || event.target.id === 'shareModal') document.getElementById('shareModal').style.display = 'none'; }
+    function copyFromModal() {
+        const input = document.getElementById('shareUrlInput');
+        input.select(); input.setSelectionRange(0, 99999);
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(input.value).then(() => showToast("Link copied!", "success"));
+            else { document.execCommand('copy'); showToast("Link copied!", "success"); }
+        } catch(err) { showToast("Could not copy the link.", "error"); }
+    }
+    function loadFromHash() { loadData(JSON.parse(fromBase64(window.location.hash.substring(1)))); }
+
+    // --- ALGORITHM ---
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function* permute(permutation) {
+        var length = permutation.length, c = new Array(length).fill(0), i = 1, k, p;
+        yield permutation.slice();
+        while (i < length) {
+            if (c[i] < i) {
+                k = i % 2 && c[i];
+                p = permutation[i]; permutation[i] = permutation[k]; permutation[k] = p;
+                ++c[i]; i = 1; yield permutation.slice();
+            } else { c[i] = 0; ++i; }
+        }
+    }
+
+    function generateOptimalSchedule() {
+        if (people.length === 0) { showToast("Add at least one person first!", "error"); return; }
+        document.getElementById('loading').style.display = 'block';
+        setTimeout(runAlgorithm, 50);
+    }
+
+    function runAlgorithm() {
+        const startW = parseInt(document.getElementById('startWeek').value);
+        const endW = parseInt(document.getElementById('endWeek').value);
+        if (startW > endW) { showToast("The start week must not be after the end week.", "error"); document.getElementById('loading').style.display = 'none'; return; }
+        const weeks = []; for (let w = startW; w <= endW; w++) weeks.push(w);
+
+        let ordersToTest = [];
+        if (people.length <= 8) {
+             const generator = permute([...people]);
+             for (let o of generator) ordersToTest.push(o);
+        } else {
+            for(let i=0; i<5000; i++) ordersToTest.push(shuffleArray([...people]));
+        }
+
+        let bestStrictOrder = [];
+        let lowestStrictConflicts = Infinity;
+
+        for (let order of ordersToTest) {
+            let { conflicts } = calculateStrictConflicts(order, weeks);
+            if (conflicts < lowestStrictConflicts) {
+                lowestStrictConflicts = conflicts;
+                bestStrictOrder = order;
+            }
+            if (lowestStrictConflicts === 0) break;
+        }
+
+        if (lowestStrictConflicts === 0) {
+            const res = calculateStrictConflicts(bestStrictOrder, weeks);
+            renderMatrix(res.schedule, 0, bestStrictOrder, "Perfect Rotation", weeks);
+        } else {
+            let flexibleResult = generateFlexibleSchedule(bestStrictOrder, weeks);
+            flexibleResult = optimizeBalance(flexibleResult, weeks, bestStrictOrder);
+
+            renderMatrix(flexibleResult.schedule, flexibleResult.conflicts, bestStrictOrder, "Flexible & Balanced", weeks);
+        }
+        document.getElementById('loading').style.display = 'none';
+        showToast("Schedule generated!", "success");
+    }
+
+    function calculateStrictConflicts(order, weeks) {
+        let conflicts = 0;
+        let schedule = [];
+        let personIndex = 0;
+        for (let w of weeks) {
+            let person = order[personIndex];
+            let isConflict = blockedWeeks.some(b => b.name === person && b.week === w);
+            if (isConflict) conflicts++;
+            schedule.push({ week: w, person: person, conflict: isConflict, isSubstitute: false, isSwap: false });
+            personIndex = (personIndex + 1) % order.length;
+        }
+        return { conflicts, schedule };
+    }
+
+    // "AVAILABILITY FIRST" LOGIC
+    function generateFlexibleSchedule(baseOrder, weeks) {
+        let schedule = [];
+        let conflicts = 0;
+        let shiftCounts = {};
+        baseOrder.forEach(p => shiftCounts[p] = 0);
+        let personIndex = 0;
+
+        for (let i = 0; i < weeks.length; i++) {
+            let w = weeks[i];
+            let intendedPerson = baseOrder[personIndex];
+
+            let intendedBlocked = blockedWeeks.some(b => b.name === intendedPerson && b.week === w);
+            let lastWorker = (i > 0) ? schedule[i-1].person : null;
+            let doubleShiftRisk = (intendedPerson === lastWorker);
+
+            // Attempt 1: Intended person (if available and not working consecutive shifts)
+            if (!intendedBlocked && !doubleShiftRisk) {
+                schedule.push({ week: w, person: intendedPerson, conflict: false, isSubstitute: false, isSwap: false });
+                shiftCounts[intendedPerson]++;
+            } else {
+                // Attempt 2: Find a substitute
+                let candidates = baseOrder.filter(p => !blockedWeeks.some(b => b.name === p && b.week === w));
+
+                if (candidates.length === 0) {
+                    // Everyone is unavailable -> conflict
+                    schedule.push({ week: w, person: intendedPerson, conflict: true, isSubstitute: false, isSwap: false });
+                    conflicts++;
+                    shiftCounts[intendedPerson]++;
+                } else {
+                    // Prioritize: 1. Avoid consecutive shifts, 2. Balance
+                    candidates.sort((a, b) => {
+                        let penaltyDoubleA = (a === lastWorker) ? 10000 : 0;
+                        let penaltyDoubleB = (b === lastWorker) ? 10000 : 0;
+
+                        let balanceA = shiftCounts[a];
+                        let balanceB = shiftCounts[b];
+
+                        return (penaltyDoubleA + balanceA) - (penaltyDoubleB + balanceB);
+                    });
+
+                    let sub = candidates[0];
+                    schedule.push({ week: w, person: sub, conflict: false, isSubstitute: true, isSwap: false });
+                    shiftCounts[sub]++;
+                }
+            }
+            personIndex = (personIndex + 1) % baseOrder.length;
+        }
+        return { conflicts, schedule };
+    }
+
+    // BALANCER
+    function optimizeBalance(result, weeks, baseOrder) {
+        let schedule = result.schedule;
+        let improved = true;
+        let iterations = 0;
+
+        while (improved && iterations < 50) {
+            improved = false;
+            iterations++;
+
+            let counts = {};
+            baseOrder.forEach(p => counts[p] = 0);
+            schedule.forEach(s => counts[s.person]++);
+
+            let sortedPeople = Object.keys(counts).sort((a,b) => counts[a] - counts[b]);
+            let minPerson = sortedPeople[0];
+            let maxPerson = sortedPeople[sortedPeople.length - 1];
+
+            if (counts[maxPerson] - counts[minPerson] <= 1) break;
+
+            for (let i = 0; i < schedule.length; i++) {
+                if (schedule[i].person === maxPerson) {
+                    let w = schedule[i].week;
+                    let isBlocked = blockedWeeks.some(b => b.name === minPerson && b.week === w);
+                    let prevP = (i > 0) ? schedule[i-1].person : null;
+                    let nextP = (i < schedule.length - 1) ? schedule[i+1].person : null;
+                    let causesDouble = (prevP === minPerson || nextP === minPerson);
+
+                    if (!isBlocked && !causesDouble) {
+                        schedule[i].person = minPerson;
+                        schedule[i].isSubstitute = false;
+                        schedule[i].isSwap = true;
+                        improved = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        let finalConflicts = 0;
+        schedule.forEach(s => { if(s.conflict) finalConflicts++; });
+        return { conflicts: finalConflicts, schedule: schedule };
+    }
+
+    // RENDER
+    function renderMatrix(schedule, conflicts, order, method, weeksRange) {
+        const thead = document.querySelector('#resultTable thead');
+        const tbody = document.querySelector('#resultTable tbody');
+        thead.innerHTML = ''; tbody.innerHTML = '';
+
+        const statsBox = document.getElementById('statsBox');
+        statsBox.style.display = 'block';
+        statsBox.style.backgroundColor = conflicts === 0 ? 'var(--success-bg)' : 'var(--danger-bg)';
+        statsBox.style.color = conflicts === 0 ? 'var(--success-text)' : 'var(--danger-text)';
+        statsBox.style.borderColor = conflicts === 0 ? 'var(--success-border)' : 'var(--danger-border)';
+
+        let counts = {}; order.forEach(p => counts[p]=0);
+        schedule.forEach(s => counts[s.person]++);
+        let vals = Object.values(counts);
+        let diff = Math.max(...vals) - Math.min(...vals);
+
+        statsBox.innerHTML = `
+            <strong>${conflicts === 0 ? '✅ Done!' : '⚠️ ' + conflicts + ' conflicts remaining'}</strong>
+            (Maximum difference in number of shifts: ${diff})<br>
+            <span style="font-size:0.85em">Strategy: ${method}</span>
+            <div class="order-flow">Base rotation: <strong>${order.join(' → ')}</strong> ↻</div>
+        `;
+
+        const headerRow = document.createElement('tr');
+        const thCorner = document.createElement('th');
+        thCorner.innerText = "Person";
+        headerRow.appendChild(thCorner);
+        weeksRange.forEach(w => {
+            const th = document.createElement('th');
+            th.innerText = w;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        const displayPeople = order;
+        displayPeople.forEach(person => {
+            const tr = document.createElement('tr');
+            const tdName = document.createElement('td');
+            tdName.innerText = person + ` (${counts[person]})`;
+            tr.appendChild(tdName);
+
+            weeksRange.forEach(w => {
+                const td = document.createElement('td');
+                const assigned = schedule.find(s => s.week === w);
+                const isAssigned = assigned && assigned.person === person;
+                const isBlocked = blockedWeeks.some(b => b.name === person && b.week === w);
+
+                if (isAssigned) {
+                    if (assigned.conflict) {
+                        td.className = 'cell-conflict'; td.innerText = "CONFLICT";
+                    } else if (assigned.isSwap) {
+                        td.className = 'cell-working-swap'; td.innerText = "Swap";
+                        td.title = "Swapped into this shift to improve balance";
+                    } else if (assigned.isSubstitute) {
+                        td.className = 'cell-working-sub'; td.innerText = "Substitute";
+                    } else {
+                        td.className = 'cell-working'; td.innerText = "Scheduled";
+                    }
+                } else if (isBlocked) {
+                    td.className = 'cell-blocked'; td.innerText = "x";
+                } else {
+                    td.innerText = "";
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+</script>
+
+</body>
+</html>
