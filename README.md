@@ -24,3 +24,6 @@ This repository contains web pages. Here are links:
 
 ## [Notepad](https://andreaslonn.se/notepad.html)
 [Notepad](https://andreaslonn.se/notepad.html) is a notepad, online. It does not store any data.
+
+## [Scheduler](https://andreaslonn.se/scheduler.html)
+[Scheduler](https://andreaslonn.se/scheduler.html) is a scheduler. It is a quick and easy way of making a schedule based on unavailability.
